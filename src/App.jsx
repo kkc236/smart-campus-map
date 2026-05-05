@@ -71,10 +71,10 @@ const ANCHORED_PLAYER_POINT = { x: 79.57916557757815, y: 37.287159379780796 };
 const ANCHORED_PLAYER_HEADING = 0;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_FILTERS = [
-  { id: 'today', label: 'Today', labelZh: '今天' },
-  { id: 'upcoming', label: 'Upcoming', labelZh: '即将开始' },
-  { id: 'week', label: 'Next 7 days', labelZh: '未来7天' },
-  { id: 'all', label: 'All dates', labelZh: '全部日期' },
+  { id: 'today', label: 'Today', labelZh: '\u4eca\u5929' },
+  { id: 'upcoming', label: 'Upcoming', labelZh: '\u5373\u5c06\u5f00\u59cb' },
+  { id: 'week', label: 'Next 7 days', labelZh: '\u672a\u67657\u5929' },
+  { id: 'all', label: 'All dates', labelZh: '\u5168\u90e8\u65e5\u671f' },
 ];
 
 const ADMIN_SESSION_KEY = 'tc-campus-events-admin-session-v1';
@@ -131,36 +131,36 @@ const UI_TEXT = {
     nearestHint: 'Turn on location or adjust filters to compare distance.',
   },
   zh: {
-    title: 'TC 校园活动地图',
-    campus: '西浦太仓校区',
-    admin: '管理端',
-    search: '搜索活动、建筑、组织者',
-    recommended: '当前推荐',
-    nextUp: '下一场',
-    nearest: '离我最近',
-    majorPick: '当前范围推荐',
-    open: '打开',
-    showNow: '查看今天',
-    showNearest: '查看最近地点',
-    place: '地点',
-    eventsHere: '个活动在这里',
-    route: '路线',
-    locationSourceLive: '实时定位',
-    locationSourceAnchor: '锚点兜底',
-    noEvents: '暂无可见活动',
-    tryFilters: '换一个搜索或筛选试试。',
-    time: '时间',
-    location: '地点',
-    organizer: '组织者',
-    audience: '适合人群',
-    howToGetThere: '怎么去',
-    registration: '报名',
-    source: '来源',
-    freshness: '地图更新',
-    back: '返回地点',
-    officialSource: '打开官方来源',
-    mapAgent: '地图助手',
-    nearestHint: '开启定位或调整筛选后，可比较距离。',
+    title: 'TC \u6821\u56ed\u6d3b\u52a8\u5730\u56fe',
+    campus: '\u897f\u6d66\u592a\u4ed3\u6821\u533a',
+    admin: '\u7ba1\u7406\u7aef',
+    search: '\u641c\u7d22\u6d3b\u52a8\u3001\u5efa\u7b51\u3001\u7ec4\u7ec7\u8005',
+    recommended: '\u5f53\u524d\u63a8\u8350',
+    nextUp: '\u4e0b\u4e00\u573a',
+    nearest: '\u79bb\u6211\u6700\u8fd1',
+    majorPick: '\u5f53\u524d\u8303\u56f4\u63a8\u8350',
+    open: '\u6253\u5f00',
+    showNow: '\u67e5\u770b\u4eca\u5929',
+    showNearest: '\u67e5\u770b\u6700\u8fd1\u5730\u70b9',
+    place: '\u5730\u70b9',
+    eventsHere: '\u4e2a\u6d3b\u52a8\u5728\u8fd9\u91cc',
+    route: '\u8def\u7ebf',
+    locationSourceLive: '\u5b9e\u65f6\u5b9a\u4f4d',
+    locationSourceAnchor: '\u951a\u70b9\u515c\u5e95',
+    noEvents: '\u6682\u65e0\u53ef\u89c1\u6d3b\u52a8',
+    tryFilters: '\u6362\u4e00\u4e2a\u641c\u7d22\u6216\u7b5b\u9009\u8bd5\u8bd5\u3002',
+    time: '\u65f6\u95f4',
+    location: '\u5730\u70b9',
+    organizer: '\u7ec4\u7ec7\u8005',
+    audience: '\u9002\u5408\u4eba\u7fa4',
+    howToGetThere: '\u600e\u4e48\u53bb',
+    registration: '\u62a5\u540d',
+    source: '\u6765\u6e90',
+    freshness: '\u5730\u56fe\u66f4\u65b0',
+    back: '\u8fd4\u56de\u5730\u70b9',
+    officialSource: '\u6253\u5f00\u5b98\u65b9\u6765\u6e90',
+    mapAgent: '\u5730\u56fe\u52a9\u624b',
+    nearestHint: '\u5f00\u542f\u5b9a\u4f4d\u6216\u8c03\u6574\u7b5b\u9009\u540e\uff0c\u53ef\u6bd4\u8f83\u8ddd\u79bb\u3002',
   },
 };
 
@@ -366,23 +366,23 @@ function getPersonalEventState(event, personalMeta) {
 
 function inferPersonalTaskType(text) {
   const normalized = String(text || '').toLowerCase();
-  if (/career|job|intern|employer|recruit|就业|招聘|实习/.test(normalized)) return 'careers';
-  if (/festival|fair|club|society|salon|社团|市集|节|沙龙/.test(normalized)) return 'student-life';
-  if (/forum|conference|panel|论坛|会议/.test(normalized)) return 'forum';
-  if (/exhibition|display|showcase|展览|展示/.test(normalized)) return 'exhibition';
-  if (/lecture|seminar|workshop|course|deadline|class|tutorial|讲座|课程|作业|截止/.test(normalized)) return 'academic';
+  if (/career|job|intern|employer|recruit|\u5c31\u4e1a|\u62db\u8058|\u5b9e\u4e60/.test(normalized)) return 'careers';
+  if (/festival|fair|club|society|salon|\u793e\u56e2|\u5e02\u96c6|\u8282|\u6c99\u9f99/.test(normalized)) return 'student-life';
+  if (/forum|conference|panel|\u8bba\u575b|\u4f1a\u8bae/.test(normalized)) return 'forum';
+  if (/exhibition|display|showcase|\u5c55\u89c8|\u5c55\u793a/.test(normalized)) return 'exhibition';
+  if (/lecture|seminar|workshop|course|deadline|class|tutorial|\u8bb2\u5ea7|\u8bfe\u7a0b|\u4f5c\u4e1a|\u622a\u6b62/.test(normalized)) return 'academic';
   return 'personal';
 }
 
 function inferPersonalTaskScope(text) {
   const normalized = String(text || '').toLowerCase();
-  if (/ai|advanced computing|人工智能|先进计算/.test(normalized)) return 'ai-computing';
-  if (/manufacturing|ime|智能制造|智造生态/.test(normalized)) return 'ime';
-  if (/finance|fintech|industry integration|business|产金|金融/.test(normalized)) return 'fintech-industry';
-  if (/robot|机器人/.test(normalized)) return 'robotics';
-  if (/iot|internet of things|物联网/.test(normalized)) return 'iot';
-  if (/culture|media|design|cultural technology|文化|传媒|设计/.test(normalized)) return 'cultural-technology';
-  if (/chip|semiconductor|芯片|半导体/.test(normalized)) return 'chips';
+  if (/ai|advanced computing|\u4eba\u5de5\u667a\u80fd|\u5148\u8fdb\u8ba1\u7b97/.test(normalized)) return 'ai-computing';
+  if (/manufacturing|ime|\u667a\u80fd\u5236\u9020|\u667a\u9020\u751f\u6001/.test(normalized)) return 'ime';
+  if (/finance|fintech|industry integration|business|\u4ea7\u91d1|\u91d1\u878d/.test(normalized)) return 'fintech-industry';
+  if (/robot|\u673a\u5668\u4eba/.test(normalized)) return 'robotics';
+  if (/iot|internet of things|\u7269\u8054\u7f51/.test(normalized)) return 'iot';
+  if (/culture|media|design|cultural technology|\u6587\u5316|\u4f20\u5a92|\u8bbe\u8ba1/.test(normalized)) return 'cultural-technology';
+  if (/chip|semiconductor|\u82af\u7247|\u534a\u5bfc\u4f53/.test(normalized)) return 'chips';
   return 'all';
 }
 
@@ -639,39 +639,39 @@ function getTimeFilterLabel(filterId, language) {
 }
 
 function getTimeActionLabel(filterId, language) {
-  if (filterId === 'today') return language === 'zh' ? '查看今天' : 'Show today';
-  return language === 'zh' ? '打开' + getTimeFilterLabel(filterId, language) : 'Show ' + getTimeFilterLabel(filterId, language);
+  if (filterId === 'today') return language === 'zh' ? '\u67e5\u770b\u4eca\u5929' : 'Show today';
+  return language === 'zh' ? '\u6253\u5f00' + getTimeFilterLabel(filterId, language) : 'Show ' + getTimeFilterLabel(filterId, language);
 }
 
 function getEventStatus(event, now, language = 'en') {
   const eventWindow = getEventWindow(event);
-  if (eventWindow.start == null || Number.isNaN(eventWindow.start)) return { label: language === 'zh' ? '时间未定' : 'Time not set', tone: 'muted' };
+  if (eventWindow.start == null || Number.isNaN(eventWindow.start)) return { label: language === 'zh' ? '\u65f6\u95f4\u672a\u5b9a' : 'Time not set', tone: 'muted' };
   const end = eventWindow.end ?? eventWindow.start;
-  if (eventWindow.start <= now && end >= now) return { label: language === 'zh' ? '进行中' : 'Now', tone: 'live' };
+  if (eventWindow.start <= now && end >= now) return { label: language === 'zh' ? '\u8fdb\u884c\u4e2d' : 'Now', tone: 'live' };
   if (eventWindow.start > now) {
     const days = Math.ceil((eventWindow.start - now) / DAY_MS);
-    if (days <= 1) return { label: language === 'zh' ? '即将开始' : 'Soon', tone: 'soon' };
-    return { label: language === 'zh' ? days + ' 天后' : days + 'd away', tone: 'upcoming' };
+    if (days <= 1) return { label: language === 'zh' ? '\u5373\u5c06\u5f00\u59cb' : 'Soon', tone: 'soon' };
+    return { label: language === 'zh' ? days + ' \u5929\u540e' : days + 'd away', tone: 'upcoming' };
   }
-  return { label: language === 'zh' ? '已结束' : 'Ended', tone: 'muted' };
+  return { label: language === 'zh' ? '\u5df2\u7ed3\u675f' : 'Ended', tone: 'muted' };
 }
 
 function formatUpdatedAt(value, now, language = 'en') {
-  if (!value) return language === 'zh' ? '更新时间未知' : 'Update time unknown';
+  if (!value) return language === 'zh' ? '\u66f4\u65b0\u65f6\u95f4\u672a\u77e5' : 'Update time unknown';
   const then = new Date(value).getTime();
-  if (Number.isNaN(then)) return language === 'zh' ? '更新时间未知' : 'Update time unknown';
+  if (Number.isNaN(then)) return language === 'zh' ? '\u66f4\u65b0\u65f6\u95f4\u672a\u77e5' : 'Update time unknown';
   const diff = Math.max(0, now - then);
-  if (diff < 60 * 1000) return language === 'zh' ? '刚刚更新' : 'Updated just now';
+  if (diff < 60 * 1000) return language === 'zh' ? '\u521a\u521a\u66f4\u65b0' : 'Updated just now';
   if (diff < 60 * 60 * 1000) {
     const mins = Math.floor(diff / 60000);
-    return language === 'zh' ? mins + ' 分钟前更新' : 'Updated ' + mins + 'm ago';
+    return language === 'zh' ? mins + ' \u5206\u949f\u524d\u66f4\u65b0' : 'Updated ' + mins + 'm ago';
   }
   if (diff < DAY_MS) {
     const hours = Math.floor(diff / 3600000);
-    return language === 'zh' ? hours + ' 小时前更新' : 'Updated ' + hours + 'h ago';
+    return language === 'zh' ? hours + ' \u5c0f\u65f6\u524d\u66f4\u65b0' : 'Updated ' + hours + 'h ago';
   }
   const days = Math.floor(diff / DAY_MS);
-  return language === 'zh' ? days + ' 天前更新' : 'Updated ' + days + 'd ago';
+  return language === 'zh' ? days + ' \u5929\u524d\u66f4\u65b0' : 'Updated ' + days + 'd ago';
 }
 
 function getMapDistance(from, to) {
@@ -681,11 +681,11 @@ function getMapDistance(from, to) {
 
 function getRouteSummary(from, location, language = 'en') {
   const distance = getMapDistance(from, location?.mapPoint);
-  if (distance == null) return language === 'zh' ? '开启实时定位后可比较距离。' : 'Enable live location to compare distance.';
-  if (distance < 8) return language === 'zh' ? '离你当前位置很近。' : 'Very close from your current point.';
-  if (distance < 18) return language === 'zh' ? '校内短距离步行。' : 'Short walk across this part of campus.';
-  if (distance < 32) return language === 'zh' ? '中等距离，建议结合入口提示。' : 'Medium campus walk; use the entrance hint.';
-  return language === 'zh' ? '跨校区距离，请预留更多步行时间。' : 'Across campus; allow extra walking time.';
+  if (distance == null) return language === 'zh' ? '\u5f00\u542f\u5b9e\u65f6\u5b9a\u4f4d\u540e\u53ef\u6bd4\u8f83\u8ddd\u79bb\u3002' : 'Enable live location to compare distance.';
+  if (distance < 8) return language === 'zh' ? '\u79bb\u4f60\u5f53\u524d\u4f4d\u7f6e\u5f88\u8fd1\u3002' : 'Very close from your current point.';
+  if (distance < 18) return language === 'zh' ? '\u6821\u5185\u77ed\u8ddd\u79bb\u6b65\u884c\u3002' : 'Short walk across this part of campus.';
+  if (distance < 32) return language === 'zh' ? '\u4e2d\u7b49\u8ddd\u79bb\uff0c\u5efa\u8bae\u7ed3\u5408\u5165\u53e3\u63d0\u793a\u3002' : 'Medium campus walk; use the entrance hint.';
+  return language === 'zh' ? '\u8de8\u6821\u533a\u8ddd\u79bb\uff0c\u8bf7\u9884\u7559\u66f4\u591a\u6b65\u884c\u65f6\u95f4\u3002' : 'Across campus; allow extra walking time.';
 }
 
 function eventMatches(event, location, query) {
@@ -863,15 +863,15 @@ function CampusMap({
   const positionLabel =
     geoStatus === 'active' && currentLocation
       ? language === 'zh'
-        ? '实时定位'
+        ? '\u5b9e\u65f6\u5b9a\u4f4d'
         : 'Live positioning'
       : geoStatus === 'requesting'
         ? language === 'zh'
-          ? '正在定位'
+          ? '\u6b63\u5728\u5b9a\u4f4d'
           : 'Locating...'
         : geoStatus === 'unsupported'
           ? language === 'zh'
-            ? '浏览器不支持定位'
+            ? '\u6d4f\u89c8\u5668\u4e0d\u652f\u6301\u5b9a\u4f4d'
             : 'Unsupported'
           : liveMapPoint
             ? t('locationSourceLive')
@@ -1359,7 +1359,7 @@ function CampusMap({
                         title={geoError || (locatorOn ? 'Hide current position' : 'Show live current position')}
                       >
                         <LocateFixed size={17} />
-                        <span>{locatorOn ? positionLabel : language === 'zh' ? '鐎规矮缍呴崗鎶芥４' : 'Position off'}</span>
+                        <span>{locatorOn ? positionLabel : language === 'zh' ? '\u5b9a\u4f4d\u5173\u95ed' : 'Position off'}</span>
                       </button>
                       <button
                         className={orientationStatus === 'active' ? 'active' : ''}
@@ -1371,10 +1371,10 @@ function CampusMap({
                         <span>
                           {orientationStatus === 'active'
                             ? language === 'zh'
-                              ? '朝向已开'
+                              ? '\u671d\u5411\u5df2\u5f00'
                               : 'Heading on'
                             : language === 'zh'
-                              ? '开启朝向'
+                              ? '\u5f00\u542f\u671d\u5411'
                               : 'Heading'}
                         </span>
                       </button>
@@ -1456,8 +1456,16 @@ function StudentApp({ data }) {
   const selectedLocationPersonalTasks = selectedLocation
     ? visiblePersonalTasks.filter((task) => task.locationId === selectedLocation.id)
     : [];
-  const checkedEventCount = Object.values(personalMeta.eventCheckins || {}).filter((entry) => entry?.checked).length;
-  const remindedEventCount = visibleEvents.filter((event) => getPersonalEventState(event, personalMeta).reminded).length;
+  const remindedPublicEvents = useMemo(
+    () => publishedEvents.filter((event) => getPersonalEventState(event, personalMeta).reminded),
+    [personalMeta, publishedEvents],
+  );
+  const checkedPublicEvents = useMemo(
+    () => publishedEvents.filter((event) => getPersonalEventState(event, personalMeta).checked),
+    [personalMeta, publishedEvents],
+  );
+  const checkedEventCount = checkedPublicEvents.length;
+  const remindedEventCount = remindedPublicEvents.length;
   const lensCounts = useMemo(() => {
     const counts = new Map();
     const countable = personalMode ? [...publishedEvents, ...openPersonalTasks.map(getFilterablePersonalTask)] : publishedEvents;
@@ -1717,15 +1725,47 @@ function StudentApp({ data }) {
   const searchSourceLabel =
     agentSearch.status === 'parsing'
       ? language === 'zh'
-        ? 'Agent 正在理解'
+        ? 'Agent \u6b63\u5728\u7406\u89e3'
         : 'Agent parsing'
       : agentSearch.source === 'openai'
         ? language === 'zh'
           ? 'OpenAI Agent'
           : 'OpenAI Agent'
         : language === 'zh'
-          ? '本地兜底'
+          ? '\u672c\u5730\u515c\u5e95'
           : 'Local fallback';
+  const nextOpenPersonalTask = filteredPersonalTasks[0] || openPersonalTasks[0] || null;
+
+  const openPersonalTaskList = () => {
+    setPersonalMode(true);
+    setPersonalSpaceOpen(true);
+    setSelectedEventId(null);
+    if (nextOpenPersonalTask) {
+      setSelectedPersonalTaskId(nextOpenPersonalTask.id);
+      if (nextOpenPersonalTask.locationId) setSelectedLocationId(nextOpenPersonalTask.locationId);
+      setSheetMode('half');
+      return;
+    }
+    setPersonalNotice(
+      language === 'zh'
+        ? '\u8fd8\u6ca1\u6709\u4e2a\u4eba\u4e8b\u9879\u3002\u53ef\u4ee5\u7c98\u8d34\u90ae\u4ef6\u6216\u624b\u52a8\u6dfb\u52a0\u3002'
+        : 'No personal events yet. Paste an email or add one manually.',
+    );
+  };
+
+  const openPersonalizedPublicEvent = (events, emptyNotice) => {
+    const event = events[0];
+    setPersonalMode(true);
+    setSelectedPersonalTaskId(null);
+    if (event) {
+      setSelectedEventId(event.id);
+      setSelectedLocationId(event.locationId);
+      setSheetMode('half');
+      return;
+    }
+    setPersonalNotice(emptyNotice);
+    setPersonalSpaceOpen(true);
+  };
 
   return (
     <main className={`student-shell ${personalMode ? 'personal-mode' : ''}`}>
@@ -1796,7 +1836,7 @@ function StudentApp({ data }) {
             {query.trim() && (
               <div className={`agent-search-status ${agentSearch.status}`}>
                 <span>{searchSourceLabel}</span>
-                <strong>{searchIntentSummary || (language === 'zh' ? '按关键词搜索' : 'Keyword search')}</strong>
+                <strong>{searchIntentSummary || (language === 'zh' ? '\u6309\u5173\u952e\u8bcd\u641c\u7d22' : 'Keyword search')}</strong>
               </div>
             )}
           </div>
@@ -1821,7 +1861,7 @@ function StudentApp({ data }) {
               aria-label="All themes"
             >
               <Sparkles size={16} />
-              <span>{language === 'zh' ? '閸忋劑鍎存稉濠氼暯' : 'All themes'}</span>
+              <span>{language === 'zh' ? '\u5168\u90e8\u4e3b\u9898' : 'All themes'}</span>
             </button>
             {EVENT_TYPES.map((type) => (
               <button
@@ -1841,25 +1881,72 @@ function StudentApp({ data }) {
       </section>
 
       {personalMode && (
-        <section className="personal-mode-banner">
-          <span className="personal-mode-title">
+        <section className="personal-mode-banner" aria-label="Personal Space actions">
+          <button
+            type="button"
+            className="personal-mode-chip personal-mode-title"
+            onClick={() => setPersonalSpaceOpen(true)}
+            title="Open Personal Space settings"
+          >
             <ClipboardCheck size={17} />
-            <strong>Personal Space mode</strong>
-          </span>
-          <span>{openPersonalTasks.length} personal event{openPersonalTasks.length === 1 ? '' : 's'}</span>
-          <span>{remindedEventCount} public reminder{remindedEventCount === 1 ? '' : 's'}</span>
-          <span>{checkedEventCount} check-in{checkedEventCount === 1 ? '' : 's'}</span>
-          <button className="ghost-button small" onClick={() => setPersonalSpaceOpen(true)}>
-            Open settings
+            <span>
+              <strong>Personal Space</strong>
+              <small>{language === 'zh' ? '\u4e2a\u4eba\u56fe\u5c42\u5df2\u5f00\u542f' : 'Private layer on'}</small>
+            </span>
           </button>
           <button
-            className="ghost-button small"
+            type="button"
+            className="personal-mode-chip personal-mode-stat"
+            onClick={openPersonalTaskList}
+            title="Open personal events"
+          >
+            <strong>{openPersonalTasks.length}</strong>
+            <span>{language === 'zh' ? '\u4e2a\u4eba\u4e8b\u9879' : `personal event${openPersonalTasks.length === 1 ? '' : 's'}`}</span>
+          </button>
+          <button
+            type="button"
+            className="personal-mode-chip personal-mode-stat"
+            onClick={() =>
+              openPersonalizedPublicEvent(
+                remindedPublicEvents,
+                language === 'zh'
+                  ? '\u8fd8\u6ca1\u6709\u516c\u5171\u63d0\u9192\u3002\u6253\u5f00\u6d3b\u52a8\u8be6\u60c5\u540e\u53ef\u4ee5\u70b9 Remind me\u3002'
+                  : 'No public reminders yet. Open a public event and tap Remind me.',
+              )
+            }
+            title="Open public reminders"
+          >
+            <strong>{remindedEventCount}</strong>
+            <span>{language === 'zh' ? '\u516c\u5171\u63d0\u9192' : `public reminder${remindedEventCount === 1 ? '' : 's'}`}</span>
+          </button>
+          <button
+            type="button"
+            className="personal-mode-chip personal-mode-stat"
+            onClick={() =>
+              openPersonalizedPublicEvent(
+                checkedPublicEvents,
+                language === 'zh'
+                  ? '\u8fd8\u6ca1\u6709\u6253\u5361\u53cd\u9988\u3002\u6253\u5f00\u6d3b\u52a8\u8be6\u60c5\u540e\u53ef\u4ee5\u6253\u5361\u3002'
+                  : 'No check-ins yet. Open an event detail to check in.',
+              )
+            }
+            title="Open check-ins"
+          >
+            <strong>{checkedEventCount}</strong>
+            <span>{language === 'zh' ? '\u6253\u5361\u53cd\u9988' : `check-in${checkedEventCount === 1 ? '' : 's'}`}</span>
+          </button>
+          <button className="personal-mode-chip settings" type="button" onClick={() => setPersonalSpaceOpen(true)}>
+            {language === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}
+          </button>
+          <button
+            className="personal-mode-chip exit"
+            type="button"
             onClick={() => {
               setPersonalMode(false);
               setSelectedPersonalTaskId(null);
             }}
           >
-            Exit mode
+            {language === 'zh' ? '\u9000\u51fa' : 'Exit'}
           </button>
         </section>
       )}
@@ -1923,13 +2010,13 @@ function StudentApp({ data }) {
         <aside className={`student-panel sheet-${sheetMode}`}>
           <div className="sheet-controls">
             <button className={sheetMode === 'peek' ? 'active' : ''} onClick={() => setSheetMode('peek')}>
-              {language === 'zh' ? '收起' : 'Peek'}
+              {language === 'zh' ? '\u6536\u8d77' : 'Peek'}
             </button>
             <button className={sheetMode === 'half' ? 'active' : ''} onClick={() => setSheetMode('half')}>
-              {language === 'zh' ? '半屏' : 'Half'}
+              {language === 'zh' ? '\u534a\u5c4f' : 'Half'}
             </button>
             <button className={sheetMode === 'full' ? 'active' : ''} onClick={() => setSheetMode('full')}>
-              {language === 'zh' ? '全屏' : 'Full'}
+              {language === 'zh' ? '\u5168\u5c4f' : 'Full'}
             </button>
           </div>
           {personalMode && selectedPersonalTask ? (
@@ -2345,10 +2432,10 @@ function CampusAgentWidget({
 
   const modeButtons = [
     { id: 'ask', label: 'Ask', icon: <MessageSquareText size={15} /> },
-    { id: 'brief', label: language === 'zh' ? '概览' : 'Brief', icon: <Compass size={15} /> },
-    { id: 'nearby', label: language === 'zh' ? '附近' : 'Near', icon: <Navigation size={15} /> },
-    { id: 'major', label: language === 'zh' ? '范围' : 'Scope', icon: <GraduationCap size={15} /> },
-    { id: 'route', label: language === 'zh' ? '路线' : 'Route', icon: <Route size={15} /> },
+    { id: 'brief', label: language === 'zh' ? '\u6982\u89c8' : 'Brief', icon: <Compass size={15} /> },
+    { id: 'nearby', label: language === 'zh' ? '\u9644\u8fd1' : 'Near', icon: <Navigation size={15} /> },
+    { id: 'major', label: language === 'zh' ? '\u8303\u56f4' : 'Scope', icon: <GraduationCap size={15} /> },
+    { id: 'route', label: language === 'zh' ? '\u8def\u7ebf' : 'Route', icon: <Route size={15} /> },
     { id: 'personal', label: 'Mine', icon: <ClipboardCheck size={15} /> },
   ];
 
@@ -2488,12 +2575,12 @@ function CampusAgentWidget({
 
             {mode === 'route' && (
               <>
-                <strong>{selectedLocation ? getLocationLabel(selectedLocation) : language === 'zh' ? '选择一个地图点' : 'Select a map point'}</strong>
+                <strong>{selectedLocation ? getLocationLabel(selectedLocation) : language === 'zh' ? '\u9009\u62e9\u4e00\u4e2a\u5730\u56fe\u70b9' : 'Select a map point'}</strong>
                 <p>
                   {selectedLocation
                     ? `${getRouteSummary(locationSnapshot?.point, selectedLocation, language)} ${selectedLocation.entranceHint}`
                     : language === 'zh'
-                      ? '点击地点标记后，这里会显示房间级路线提示。'
+                      ? '\u70b9\u51fb\u5730\u70b9\u6807\u8bb0\u540e\uff0c\u8fd9\u91cc\u4f1a\u663e\u793a\u623f\u95f4\u7ea7\u8def\u7ebf\u63d0\u793a\u3002'
                       : 'Tap a place marker to see room-level guidance here.'}
                 </p>
               </>

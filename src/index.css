@@ -448,33 +448,88 @@ a {
 
 .personal-mode-banner {
   display: flex;
-  min-height: 48px;
-  flex-wrap: wrap;
+  min-height: 0;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
   border: 1px solid rgba(109, 47, 212, 0.24);
   border-radius: 8px;
   background: #fbf8ff;
   color: #563091;
   box-shadow: 0 10px 24px rgba(52, 22, 105, 0.1);
-  padding: 8px;
+  padding: 7px;
 }
 
-.personal-mode-banner span {
+.personal-mode-banner::-webkit-scrollbar {
+  display: none;
+}
+
+.personal-mode-chip {
   display: inline-flex;
-  min-height: 32px;
+  min-height: 38px;
+  flex: 0 0 auto;
   align-items: center;
   gap: 7px;
   border: 1px solid rgba(109, 47, 212, 0.14);
   border-radius: 8px;
   background: #ffffff;
+  color: #563091;
+  cursor: pointer;
   font-size: 12px;
   font-weight: 850;
-  padding: 0 10px;
+  line-height: 1.1;
+  padding: 0 11px;
+  white-space: nowrap;
+}
+
+.personal-mode-chip:hover,
+.personal-mode-chip:focus-visible {
+  border-color: rgba(109, 47, 212, 0.34);
+  background: #f5efff;
+  outline: none;
 }
 
 .personal-mode-title {
   color: #2e184d;
+}
+
+.personal-mode-title > span {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.personal-mode-title small {
+  color: #7b6a91;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.personal-mode-stat strong {
+  color: #563091;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.personal-mode-stat span {
+  color: #2e184d;
+}
+
+.personal-mode-chip.settings {
+  color: #2e184d;
+}
+
+.personal-mode-chip.exit {
+  border-color: rgba(199, 68, 64, 0.22);
+  color: #8a2432;
+}
+
+.personal-mode-chip.exit:hover,
+.personal-mode-chip.exit:focus-visible {
+  border-color: rgba(199, 68, 64, 0.38);
+  background: #fff4f3;
 }
 
 .student-shell.personal-mode .campus-map {
@@ -1690,7 +1745,7 @@ a {
   height: 34px;
 }
 
-.personal-head span:last-child {
+.personal-head > span:not(.personal-icon) {
   display: grid;
   min-width: 0;
   gap: 2px;
