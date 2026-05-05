@@ -7,53 +7,57 @@ export const EVENT_TYPES = [
   { id: 'exhibition', label: 'Exhibition', color: '#1f8a70' },
   { id: 'student-life', label: 'Student life', color: '#e7a83d' },
   { id: 'festival', label: 'Festival', color: '#d94b48' },
+  { id: 'sports', label: 'Sports', color: '#0f8d57' },
+  { id: 'exam', label: 'Exam', color: '#8a4fd3' },
+  { id: 'deadline', label: 'Deadline', color: '#c44949' },
 ];
 
 export const STUDENT_LENSES = [
-  { id: 'all', label: 'School-wide', labelZh: '全校', shortLabel: 'All', shortLabelZh: '全校' },
+  { id: 'all', label: 'Collection', labelZh: '\u96c6\u5408', shortLabel: 'Collection', shortLabelZh: '\u96c6\u5408' },
+  { id: 'campus', label: 'Campus', labelZh: '\u6821\u56ed', shortLabel: 'Campus', shortLabelZh: '\u6821\u56ed' },
   {
     id: 'ime',
     label: 'School of Intelligent Manufacturing Ecosystem',
-    labelZh: '智造生态学院',
+    labelZh: '\u667a\u9020\u751f\u6001\u5b66\u9662',
     shortLabel: 'IME',
-    shortLabelZh: '智造生态',
+    shortLabelZh: '\u667a\u9020\u751f\u6001',
   },
   {
     id: 'ai-computing',
     label: 'School of AI and Advanced Computing',
-    labelZh: '人工智能与先进计算学院',
+    labelZh: '\u4eba\u5de5\u667a\u80fd\u4e0e\u5148\u8fdb\u8ba1\u7b97\u5b66\u9662',
     shortLabel: 'AI / Computing',
-    shortLabelZh: 'AI先进计算',
+    shortLabelZh: 'AI\u5148\u8fdb\u8ba1\u7b97',
   },
   {
     id: 'fintech-industry',
     label: 'School of Financial Technology and Industry Integration',
-    labelZh: '产金融合学院',
+    labelZh: '\u4ea7\u91d1\u878d\u5408\u5b66\u9662',
     shortLabel: 'FinTech',
-    shortLabelZh: '产金融合',
+    shortLabelZh: '\u4ea7\u91d1\u878d\u5408',
   },
   {
     id: 'robotics',
     label: 'School of Robotics',
-    labelZh: '智能机器人学院',
+    labelZh: '\u667a\u80fd\u673a\u5668\u4eba\u5b66\u9662',
     shortLabel: 'Robotics',
-    shortLabelZh: '机器人',
+    shortLabelZh: '\u673a\u5668\u4eba',
   },
   {
     id: 'iot',
     label: 'School of Internet of Things',
-    labelZh: '物联网学院',
+    labelZh: '\u7269\u8054\u7f51\u5b66\u9662',
     shortLabel: 'IoT',
-    shortLabelZh: '物联网',
+    shortLabelZh: '\u7269\u8054\u7f51',
   },
   {
     id: 'cultural-technology',
     label: 'School of Cultural Technology',
-    labelZh: '文化科技学院',
+    labelZh: '\u6587\u5316\u79d1\u6280\u5b66\u9662',
     shortLabel: 'Culture Tech',
-    shortLabelZh: '文化科技',
+    shortLabelZh: '\u6587\u5316\u79d1\u6280',
   },
-  { id: 'chips', label: 'School of CHIPS', labelZh: '芯片学院', shortLabel: 'CHIPS', shortLabelZh: '芯片' },
+  { id: 'chips', label: 'School of CHIPS', labelZh: '\u82af\u7247\u5b66\u9662', shortLabel: 'CHIPS', shortLabelZh: '\u82af\u7247' },
 ];
 
 const STUDENT_LENS_IDS = new Set(STUDENT_LENSES.map((lens) => lens.id));
@@ -61,8 +65,10 @@ const LEGACY_LENS_MAP = {
   'ai-education': 'ai-computing',
   engineering: 'ime',
   business: 'fintech-industry',
-  research: 'all',
-  'campus-life': 'all',
+  research: 'campus',
+  'campus-life': 'campus',
+  schoolwide: 'campus',
+  'school-wide': 'campus',
 };
 
 export const PRECISION_LABELS = {
@@ -247,7 +253,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-22T18:30',
     endTime: '2026-05-24T21:00',
     locationId: 'j-students-centre',
-    studentLenses: ['all'],
+    studentLenses: ['campus'],
     summary: 'Salon series for the XJTLU 20th anniversary, including Taicang campus sessions.',
     audience: 'Students',
     registration: 'Follow campus announcement',
@@ -281,7 +287,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-26T09:00',
     endTime: '2026-05-31T18:00',
     locationId: 'bc-corridor-2f',
-    studentLenses: ['all'],
+    studentLenses: ['campus'],
     summary: 'Taicang campus phase of the XJTLU 20th anniversary research exhibition.',
     audience: 'All students and staff',
     registration: 'Walk-in',
@@ -332,7 +338,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-30T09:00',
     endTime: '2026-05-30T21:00',
     locationId: 'xec-central',
-    studentLenses: ['all'],
+    studentLenses: ['campus'],
     summary: 'Open Campus, Syntegrated City conference and campus bazar at XEC campus.',
     audience: 'Students, staff, and partners',
     registration: 'Check official event page',
@@ -362,10 +368,15 @@ export function normalizeStudentScopeId(scopeId) {
   return STUDENT_LENS_IDS.has(migrated) ? migrated : 'all';
 }
 
+function normalizeAssignableScopeId(scopeId) {
+  const normalized = normalizeStudentScopeId(scopeId);
+  return normalized === 'all' ? 'campus' : normalized;
+}
+
 export function normalizeStudentScopeIds(scopeIds) {
   const ids = Array.isArray(scopeIds) ? scopeIds : [];
-  const normalized = [...new Set(ids.map(normalizeStudentScopeId))].filter((id) => STUDENT_LENS_IDS.has(id));
-  return normalized.length ? normalized : ['all'];
+  const normalized = [...new Set(ids.map(normalizeAssignableScopeId))].filter((id) => STUDENT_LENS_IDS.has(id));
+  return normalized.length ? normalized : ['campus'];
 }
 
 export function getEventLenses(event) {
@@ -388,15 +399,17 @@ export function getEventLenses(event) {
   }
   if (text.includes('chip') || text.includes('semiconductor')) lenses.add('chips');
   if (event.type === 'festival' || event.type === 'student-life' || text.includes('anniversary') || text.includes('research exhibition')) {
-    lenses.add('all');
+    lenses.add('campus');
   }
-  if (lenses.size === 0) lenses.add('all');
+  if (lenses.size === 0) lenses.add('campus');
 
   return [...lenses];
 }
 
 export function eventFitsLens(event, lensId) {
-  return getEventLenses(event).includes(normalizeStudentScopeId(lensId));
+  const normalizedLensId = normalizeStudentScopeId(lensId);
+  if (normalizedLensId === 'all') return true;
+  return getEventLenses(event).includes(normalizedLensId);
 }
 
 export function getLocationLabel(location) {

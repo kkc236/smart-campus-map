@@ -11,6 +11,9 @@ import {
   Compass,
   Crosshair,
   ExternalLink,
+  AlarmClock,
+  ClipboardList,
+  Dumbbell,
   GraduationCap,
   LocateFixed,
   MapPin,
@@ -49,6 +52,7 @@ import {
   getEventType,
   getLocationLabel,
   getStudentLens,
+  normalizeStudentScopeIds,
   normalizeStudentScopeId,
   isPublished,
 } from './data';
@@ -195,7 +199,17 @@ function normalizeCampusData(data) {
   return {
     ...data,
     locations: data.locations || [],
-    events: (data.events || []).map((event) => {
+    events: (data.events || []).map((rawEvent) => {
+      const event = {
+        ...rawEvent,
+        studentLenses: normalizeStudentScopeIds(rawEvent.studentLenses),
+        publishedSnapshot: rawEvent.publishedSnapshot
+          ? {
+              ...rawEvent.publishedSnapshot,
+              studentLenses: normalizeStudentScopeIds(rawEvent.publishedSnapshot.studentLenses || rawEvent.studentLenses),
+            }
+          : rawEvent.publishedSnapshot,
+      };
       if ((event.reviewStatus === 'published' || event.reviewStatus === 'changed') && !event.publishedSnapshot) {
         return {
           ...event,
@@ -366,11 +380,14 @@ function getPersonalEventState(event, personalMeta) {
 
 function inferPersonalTaskType(text) {
   const normalized = String(text || '').toLowerCase();
+  if (/deadline|due|submit|submission|\u622a\u6b62|\u622a\u6b62\u65e5\u671f|\u63d0\u4ea4|\u5230\u671f/.test(normalized)) return 'deadline';
+  if (/exam|quiz|test|midterm|final|\u8003\u8bd5|\u6d4b\u9a8c|\u671f\u4e2d|\u671f\u672b/.test(normalized)) return 'exam';
+  if (/sport|sports|basketball|football|soccer|badminton|tennis|run|fitness|\u4f53\u80b2|\u8fd0\u52a8|\u7bee\u7403|\u8db3\u7403|\u7fbd\u6bdb\u7403/.test(normalized)) return 'sports';
   if (/career|job|intern|employer|recruit|\u5c31\u4e1a|\u62db\u8058|\u5b9e\u4e60/.test(normalized)) return 'careers';
   if (/festival|fair|club|society|salon|\u793e\u56e2|\u5e02\u96c6|\u8282|\u6c99\u9f99/.test(normalized)) return 'student-life';
   if (/forum|conference|panel|\u8bba\u575b|\u4f1a\u8bae/.test(normalized)) return 'forum';
   if (/exhibition|display|showcase|\u5c55\u89c8|\u5c55\u793a/.test(normalized)) return 'exhibition';
-  if (/lecture|seminar|workshop|course|deadline|class|tutorial|\u8bb2\u5ea7|\u8bfe\u7a0b|\u4f5c\u4e1a|\u622a\u6b62/.test(normalized)) return 'academic';
+  if (/lecture|seminar|workshop|course|class|tutorial|\u8bb2\u5ea7|\u8bfe\u7a0b|\u4f5c\u4e1a/.test(normalized)) return 'academic';
   return 'personal';
 }
 
@@ -781,6 +798,9 @@ function EventTypeIcon({ typeId, size = 16 }) {
   if (typeId === 'exhibition') return <Palette size={size} />;
   if (typeId === 'student-life') return <Users size={size} />;
   if (typeId === 'festival') return <PartyPopper size={size} />;
+  if (typeId === 'sports') return <Dumbbell size={size} />;
+  if (typeId === 'exam') return <ClipboardList size={size} />;
+  if (typeId === 'deadline') return <AlarmClock size={size} />;
   return <Sparkles size={size} />;
 }
 
@@ -1400,7 +1420,7 @@ function StudentApp({ data }) {
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [locationSnapshot, setLocationSnapshot] = useState(null);
   const [language, setLanguage] = useState('en');
-  const [sheetMode, setSheetMode] = useState('half');
+  const [sheetMode, setSheetMode] = useState('peek');
   const [agentSearch, setAgentSearch] = useState({ status: 'idle', source: 'local', intent: createLocalSearchIntent('') });
   const [personalId] = useState(readPersonalId);
   const [personalTasks, setPersonalTasks] = useState(() => readPersonalTasks(readPersonalId()));
@@ -1413,6 +1433,7 @@ function StudentApp({ data }) {
   const [personalSpaceOpen, setPersonalSpaceOpen] = useState(false);
   const [personalMode, setPersonalMode] = useState(false);
   const [agentDialogOpen, setAgentDialogOpen] = useState(false);
+  const [detailPanelOpen, setDetailPanelOpen] = useState(true);
   const t = useCallback((key) => getText(language, key), [language]);
   const studentEvents = useMemo(() => data.events.map(resolveStudentEvent).filter(Boolean), [data.events]);
   const localSearchIntent = useMemo(() => createLocalSearchIntent(query), [query]);
@@ -1744,6 +1765,7 @@ function StudentApp({ data }) {
       setSelectedPersonalTaskId(nextOpenPersonalTask.id);
       if (nextOpenPersonalTask.locationId) setSelectedLocationId(nextOpenPersonalTask.locationId);
       setSheetMode('half');
+      setDetailPanelOpen(true);
       return;
     }
     setPersonalNotice(
@@ -1761,6 +1783,7 @@ function StudentApp({ data }) {
       setSelectedEventId(event.id);
       setSelectedLocationId(event.locationId);
       setSheetMode('half');
+      setDetailPanelOpen(true);
       return;
     }
     setPersonalNotice(emptyNotice);
@@ -1965,49 +1988,66 @@ function StudentApp({ data }) {
           setSelectedLocationId(event.locationId);
           setSelectedPersonalTaskId(null);
           setSheetMode('half');
+          setDetailPanelOpen(true);
         }}
         onSelectLocation={(locationId) => {
           setSelectedLocationId(locationId);
           setSelectedEventId(null);
           setSelectedPersonalTaskId(null);
           setSheetMode('half');
+          setDetailPanelOpen(true);
         }}
         onTimeFilter={setTimeFilter}
       />
 
-      <section className="student-layout">
-        <CampusMap
-          stacks={stacks}
-          locations={data.locations}
-          personalTasks={visiblePersonalTasks}
-          personalMode={personalMode}
-          personalMeta={personalMeta}
-          selectedLocationId={selectedLocation?.id}
-          selectedEventId={selectedEventId}
-          selectedPersonalTaskId={selectedPersonalTaskId}
-          onLocationSnapshot={handleLocationSnapshot}
-          language={language}
-          t={t}
-          onSelectLocation={(locationId) => {
-            setSelectedLocationId(locationId);
-            setSelectedEventId(null);
-            setSelectedPersonalTaskId(null);
-            setSheetMode('half');
-          }}
-          onSelectPersonalTask={(taskId, locationId) => {
-            setPersonalMode(true);
-            setSelectedPersonalTaskId(taskId);
-            setSelectedEventId(null);
-            setSelectedLocationId(locationId);
-            setSheetMode('half');
-          }}
-          onMovePersonalTask={(taskId, mapPoint) => {
-            updatePersonalTask(taskId, { mapPoint, locationId: '' });
-            setSelectedPersonalTaskId(taskId);
-          }}
-        />
+      <section className={`student-layout ${detailPanelOpen ? '' : 'details-collapsed'}`}>
+        <div className="map-stage">
+          <button
+            className={`detail-panel-toggle ${detailPanelOpen ? 'active' : ''}`}
+            type="button"
+            onClick={() => setDetailPanelOpen((value) => !value)}
+            title={detailPanelOpen ? 'Hide details' : 'Show details'}
+          >
+            {detailPanelOpen ? <X size={15} /> : <MapPin size={15} />}
+            <span>{language === 'zh' ? (detailPanelOpen ? '\u9690\u85cf\u8be6\u60c5' : '\u663e\u793a\u8be6\u60c5') : detailPanelOpen ? 'Hide details' : 'Details'}</span>
+          </button>
+          <CampusMap
+            stacks={stacks}
+            locations={data.locations}
+            personalTasks={visiblePersonalTasks}
+            personalMode={personalMode}
+            personalMeta={personalMeta}
+            selectedLocationId={selectedLocation?.id}
+            selectedEventId={selectedEventId}
+            selectedPersonalTaskId={selectedPersonalTaskId}
+            onLocationSnapshot={handleLocationSnapshot}
+            language={language}
+            t={t}
+            onSelectLocation={(locationId) => {
+              setSelectedLocationId(locationId);
+              setSelectedEventId(null);
+              setSelectedPersonalTaskId(null);
+              setSheetMode('half');
+              setDetailPanelOpen(true);
+            }}
+            onSelectPersonalTask={(taskId, locationId) => {
+              setPersonalMode(true);
+              setSelectedPersonalTaskId(taskId);
+              setSelectedEventId(null);
+              setSelectedLocationId(locationId);
+              setSheetMode('half');
+              setDetailPanelOpen(true);
+            }}
+            onMovePersonalTask={(taskId, mapPoint) => {
+              updatePersonalTask(taskId, { mapPoint, locationId: '' });
+              setSelectedPersonalTaskId(taskId);
+              setDetailPanelOpen(true);
+            }}
+          />
+        </div>
 
-        <aside className={`student-panel sheet-${sheetMode}`}>
+        {detailPanelOpen && (
+          <aside className={`student-panel sheet-${sheetMode}`}>
           <div className="sheet-controls">
             <button className={sheetMode === 'peek' ? 'active' : ''} onClick={() => setSheetMode('peek')}>
               {language === 'zh' ? '\u6536\u8d77' : 'Peek'}
@@ -2058,6 +2098,7 @@ function StudentApp({ data }) {
               onSelectEvent={(eventId) => {
                 setSelectedEventId(eventId);
                 setSelectedPersonalTaskId(null);
+                setDetailPanelOpen(true);
               }}
               onToggleEventReminder={toggleEventReminder}
               onToggleEventCheckin={toggleEventCheckin}
@@ -2066,13 +2107,15 @@ function StudentApp({ data }) {
                 setPersonalMode(true);
                 setSelectedPersonalTaskId(task.id);
                 setPersonalSpaceOpen(true);
+                setDetailPanelOpen(true);
               }}
               onTogglePersonalTask={(task) => updatePersonalTask(task.id, { completed: !task.completed })}
             />
           ) : (
             <EmptyPanel t={t} />
           )}
-        </aside>
+          </aside>
+        )}
       </section>
       <PersonalSpaceDrawer
         open={personalSpaceOpen}
@@ -2104,6 +2147,7 @@ function StudentApp({ data }) {
           setSelectedPersonalTaskId(task.id);
           setSelectedEventId(null);
           if (task.locationId) setSelectedLocationId(task.locationId);
+          setDetailPanelOpen(true);
         }}
         onToggleTask={(task) => updatePersonalTask(task.id, { completed: !task.completed })}
         onDeleteTask={(task) => deletePersonalTask(task.id)}
@@ -3364,7 +3408,7 @@ function AdminApp({ data, updateData, resetData, onLogout }) {
       startTime: '',
       endTime: '',
       locationId,
-      studentLenses: ['all'],
+      studentLenses: ['campus'],
       summary: '',
       audience: 'Students',
       registration: '',

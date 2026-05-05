@@ -1,11 +1,13 @@
-const EVENT_TYPE_IDS = ['academic', 'forum', 'careers', 'exhibition', 'student-life', 'festival'];
-const STUDENT_LENS_IDS = ['all', 'ime', 'ai-computing', 'fintech-industry', 'robotics', 'iot', 'cultural-technology', 'chips'];
+const EVENT_TYPE_IDS = ['academic', 'forum', 'careers', 'exhibition', 'student-life', 'festival', 'sports', 'exam', 'deadline'];
+const STUDENT_LENS_IDS = ['all', 'campus', 'ime', 'ai-computing', 'fintech-industry', 'robotics', 'iot', 'cultural-technology', 'chips'];
 const LEGACY_LENS_MAP = {
   'ai-education': 'ai-computing',
   engineering: 'ime',
   business: 'fintech-industry',
-  research: 'all',
-  'campus-life': 'all',
+  research: 'campus',
+  'campus-life': 'campus',
+  schoolwide: 'campus',
+  'school-wide': 'campus',
 };
 const TIME_FILTER_IDS = ['all', 'today', 'upcoming', 'week', 'now', 'laterToday', 'tomorrow'];
 
@@ -41,8 +43,11 @@ export const SEARCH_INTENT_SCHEMA = {
 };
 
 const TYPE_ALIASES = [
+  { ids: ['sports'], terms: ['sport', 'sports', 'basketball', 'football', 'soccer', 'badminton', 'tennis', 'fitness', '\u4f53\u80b2', '\u8fd0\u52a8', '\u7bee\u7403', '\u8db3\u7403', '\u7fbd\u6bdb\u7403'] },
+  { ids: ['exam'], terms: ['exam', 'quiz', 'test', 'midterm', 'final', '\u8003\u8bd5', '\u6d4b\u9a8c', '\u671f\u4e2d', '\u671f\u672b'] },
+  { ids: ['deadline'], terms: ['deadline', 'due', 'submit', 'submission', '\u622a\u6b62', '\u622a\u6b62\u65e5\u671f', '\u63d0\u4ea4', '\u5230\u671f'] },
   { ids: ['academic', 'forum'], terms: ['lecture', 'talk', '讲座'] },
-  { ids: ['academic'], terms: ['academic', 'seminar', 'workshop', 'class', 'study', 'course', 'deadline', '学术', '课程', '作业'] },
+  { ids: ['academic'], terms: ['academic', 'seminar', 'workshop', 'class', 'study', 'course', '学术', '课程', '作业'] },
   { ids: ['forum'], terms: ['forum', 'conference', 'symposium', 'panel', '论坛', '会议', '圆桌'] },
   { ids: ['careers'], terms: ['career', 'careers', 'job', 'internship', 'industry', 'recruit', '就业', '招聘', '实习', '行业'] },
   { ids: ['exhibition'], terms: ['exhibition', 'showcase', 'display', '展览', '展示'] },
@@ -51,6 +56,8 @@ const TYPE_ALIASES = [
 ];
 
 const LENS_ALIASES = [
+  { ids: ['all'], terms: ['collection', 'all', 'all events', '\u96c6\u5408', '\u5168\u90e8'] },
+  { ids: ['campus'], terms: ['campus', 'school-wide', 'all school', 'campus level', 'campus-wide', '\u6821\u56ed', '\u6821\u7ea7', '\u5168\u6821'] },
   { ids: ['all'], terms: ['school-wide', 'all school', 'campus level', 'campus-wide', '全校', '校级'] },
   { ids: ['ai-computing'], terms: ['ai', 'artificial intelligence', 'advanced computing', 'aied', 'education', 'teaching', 'learning', '人工智能', '先进计算'] },
   { ids: ['ime'], terms: ['ime', 'manufacturing', 'intelligent manufacturing', 'ecosystem', '智造生态', '智能制造'] },
@@ -299,7 +306,7 @@ export function eventMatchesSearchIntent(event, location, intent) {
   if (!intent?.active) return true;
   if (intent.typeIds.length > 0 && !intent.typeIds.includes(event.type)) return false;
 
-  if (intent.lensIds.length > 0) {
+  if (intent.lensIds.length > 0 && !intent.lensIds.includes('all')) {
     const eventLenses = unique(Array.isArray(event.studentLenses) ? event.studentLenses.map(normalizeLensId) : []);
     if (!intent.lensIds.some((lensId) => eventLenses.includes(lensId))) return false;
   }

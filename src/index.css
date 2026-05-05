@@ -89,8 +89,8 @@ a {
   display: flex;
   min-height: 100vh;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px;
+  gap: 10px;
+  padding: 18px 22px 16px;
 }
 
 .student-topbar {
@@ -139,7 +139,7 @@ a {
 .top-action {
   position: relative;
   display: inline-flex;
-  min-height: 38px;
+  min-height: 36px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -207,7 +207,7 @@ a {
 
 .student-filter-stack {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .student-tools {
@@ -225,7 +225,7 @@ a {
 
 .search-box {
   display: flex;
-  min-height: 44px;
+  min-height: 40px;
   align-items: center;
   gap: 10px;
   border: 1px solid var(--line);
@@ -326,7 +326,7 @@ a {
 .time-strip button {
   display: inline-flex;
   min-width: 0;
-  min-height: 38px;
+  min-height: 34px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -372,7 +372,7 @@ a {
 
 .lens-strip button {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 36px;
   flex: 0 0 auto;
   align-items: center;
   gap: 8px;
@@ -417,12 +417,12 @@ a {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
-  padding: 5px;
+  padding: 4px;
 }
 
 .theme-dock button {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 30px;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -540,20 +540,61 @@ a {
   display: grid;
   flex: 1;
   min-height: 0;
-  grid-template-columns: minmax(0, 1fr) 390px;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 27vw, 340px);
+  gap: 12px;
+  align-items: start;
+}
+
+.student-layout.details-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.map-stage {
+  position: relative;
+  min-width: 0;
+}
+
+.detail-panel-toggle {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 10;
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(23, 32, 35, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 20px rgba(31, 43, 47, 0.12);
+  color: #27434a;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  padding: 0 10px;
+}
+
+.detail-panel-toggle:hover,
+.detail-panel-toggle:focus-visible {
+  border-color: rgba(15, 118, 110, 0.32);
+  background: #edf9f6;
+  outline: none;
 }
 
 .recommendation-rail {
   display: grid;
+  grid-template-columns: minmax(150px, 170px) minmax(0, 1fr);
+  align-items: stretch;
   gap: 10px;
 }
 
 .recommendation-head {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: center;
+  gap: 8px;
 }
 
 .recommendation-head .eyebrow {
@@ -580,20 +621,21 @@ a {
 .recommendation-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .recommendation-card {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 9px;
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
   color: var(--ink);
   cursor: pointer;
-  padding: 12px;
+  min-height: 58px;
+  padding: 8px 10px;
   text-align: left;
 }
 
@@ -604,8 +646,8 @@ a {
 
 .recommendation-icon {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   border-radius: 8px;
   background: #edf4ff;
@@ -663,8 +705,9 @@ a {
 }
 
 .student-layout .map-plane {
-  height: clamp(420px, calc(100vh - 370px), 620px);
+  height: clamp(420px, calc(100vh - 330px), 680px);
   min-height: 420px;
+  padding: 8px;
 }
 
 .map-transform-wrapper {
@@ -681,7 +724,7 @@ a {
 
 .map-canvas {
   position: relative;
-  width: min(100%, calc((100vh - 194px) * 1.4347));
+  width: min(100%, calc(143.47vh - 278px));
   max-height: 100%;
   aspect-ratio: 1835 / 1279;
   border-radius: 6px;
@@ -690,8 +733,16 @@ a {
 }
 
 .student-layout .map-canvas {
-  width: min(96%, calc(600px * 1.4347));
-  transform: translate(16px, 14px);
+  width: min(100%, clamp(580px, calc(143.47vh - 496px), 953px));
+  transform: none;
+}
+
+.student-layout .map-transform-content {
+  transform: none !important;
+}
+
+.student-layout .map-transform-wrapper {
+  overflow: visible !important;
 }
 
 .map-canvas img {
@@ -772,7 +823,7 @@ a {
   border-radius: 999px;
   background: #17a079;
   color: #ffffff;
-  content: "✓";
+  content: "\2713";
   font-size: 11px;
   font-weight: 900;
   line-height: 1;
@@ -1052,13 +1103,13 @@ a {
 
 .student-panel {
   min-width: 0;
-  max-height: clamp(420px, calc(100vh - 370px), 620px);
+  max-height: clamp(420px, calc(100vh - 330px), 680px);
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   box-shadow: var(--shadow);
   overflow: auto;
-  padding: 18px;
+  padding: 14px;
 }
 
 .sheet-controls {
@@ -1096,9 +1147,14 @@ a {
 .place-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 16px;
+  padding-bottom: 14px;
+}
+
+.place-card h2 {
+  font-size: 22px;
+  line-height: 1.15;
 }
 
 .trust-row {
@@ -1193,14 +1249,16 @@ a {
 
 .event-row {
   grid-template-columns: minmax(0, 1fr) auto;
-  padding: 12px;
+  padding: 10px;
 }
 
 .event-row-side {
   display: inline-flex;
   align-items: center;
+  align-self: start;
+  flex-direction: column;
   justify-content: flex-end;
-  gap: 7px;
+  gap: 6px;
 }
 
 .event-row.personal-reminded {
@@ -1230,8 +1288,11 @@ a {
 .event-row strong,
 .admin-event-row strong {
   overflow: hidden;
+  display: -webkit-box;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
 }
 
 .event-row small,
@@ -1239,8 +1300,9 @@ a {
   overflow: hidden;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.35;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .personal-event-actions {
@@ -2293,7 +2355,7 @@ a {
 }
 
 .admin-map-area .map-canvas {
-  max-width: calc((100vh - 122px) * 1.4347);
+  max-width: calc(143.47vh - 175px);
 }
 
 .admin-statusbar {
@@ -2563,7 +2625,20 @@ a {
     display: block;
   }
 
-  .map-plane,
+  .recommendation-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .recommendation-head {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .student-layout .map-plane {
+    height: clamp(260px, calc(69.7vw + 1px), 68vh);
+    min-height: 260px;
+  }
+
   .admin-map-area .map-plane {
     height: 68vh;
     min-height: 420px;
@@ -2571,12 +2646,12 @@ a {
 
   .map-canvas,
   .admin-map-area .map-canvas {
-    max-width: calc((68vh - 24px) * 1.4347);
+    max-width: calc(97.56vh - 34px);
   }
 
   .student-layout .map-canvas {
-    width: min(96%, calc((68vh - 42px) * 1.4347));
-    transform: translate(7px, 10px);
+    width: min(100%, calc(97.56vh - 60px));
+    transform: none;
   }
 
   .map-marker {
