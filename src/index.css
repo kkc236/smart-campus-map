@@ -212,7 +212,7 @@ a {
 
 .student-tools {
   display: grid;
-  grid-template-columns: minmax(260px, 380px) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
   gap: 12px;
   align-items: center;
 }
@@ -318,7 +318,7 @@ a {
 
 .time-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(112px, 1fr));
+  grid-template-columns: repeat(4, minmax(112px, 1fr));
   gap: 8px;
   min-width: 0;
 }
@@ -410,6 +410,8 @@ a {
 
 .theme-dock {
   display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   border: 1px solid var(--line);
@@ -419,14 +421,23 @@ a {
 }
 
 .theme-dock button {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border-radius: 8px;
   background: transparent;
   color: #526168;
   cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.theme-dock button svg {
+  flex: 0 0 auto;
 }
 
 .theme-dock button:hover,
@@ -624,7 +635,8 @@ a {
 }
 
 .student-layout .map-canvas {
-  width: min(100%, calc(620px * 1.4347));
+  width: min(96%, calc(600px * 1.4347));
+  transform: translate(16px, 14px);
 }
 
 .map-canvas img {
@@ -1563,6 +1575,11 @@ a {
   transform: translate(8px, -112%);
 }
 
+.personal-task-marker.dragging {
+  z-index: 9;
+  cursor: grabbing;
+}
+
 .personal-task-pin {
   position: relative;
   display: grid;
@@ -1576,8 +1593,15 @@ a {
   transform: rotate(-45deg);
 }
 
+.personal-task-pin.mixed {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  padding: 8px;
+}
+
 .personal-task-pin svg,
-.personal-task-pin b {
+.personal-task-pin b,
+.personal-task-pin .mini-type-icon {
   transform: rotate(45deg);
 }
 
@@ -1598,7 +1622,7 @@ a {
 
 .personal-task-marker:hover .personal-task-pin,
 .personal-task-marker.selected .personal-task-pin {
-  outline: 4px solid rgba(109, 47, 212, 0.2);
+  outline: 4px solid color-mix(in srgb, var(--personal-color, #6d2fd4) 22%, transparent);
 }
 
 .personal-space-drawer {
@@ -1657,7 +1681,7 @@ a {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #6d2fd4;
+  background: var(--type-color, #6d2fd4);
   color: #ffffff;
 }
 
@@ -1790,6 +1814,16 @@ a {
   color: #6b6078;
   font-size: 11px;
   font-weight: 850;
+}
+
+.drag-helper {
+  border: 1px solid rgba(109, 47, 212, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #6b6078;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 8px 9px;
 }
 
 .personal-notice {
@@ -2342,6 +2376,14 @@ a {
   width: auto;
 }
 
+.scope-editor {
+  display: grid;
+  gap: 6px;
+  color: #435157;
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .checkline {
   display: flex;
   min-height: 42px;
@@ -2444,9 +2486,9 @@ a {
   }
 
   .theme-dock {
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
-    overflow-x: auto;
+    overflow: visible;
   }
 
   .time-strip {
@@ -2475,6 +2517,11 @@ a {
   .map-canvas,
   .admin-map-area .map-canvas {
     max-width: calc((68vh - 24px) * 1.4347);
+  }
+
+  .student-layout .map-canvas {
+    width: min(96%, calc((68vh - 42px) * 1.4347));
+    transform: translate(7px, 10px);
   }
 
   .map-marker {

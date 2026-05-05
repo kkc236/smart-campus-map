@@ -1,6 +1,13 @@
 const EVENT_TYPE_IDS = ['academic', 'forum', 'careers', 'exhibition', 'student-life', 'festival'];
-const STUDENT_LENS_IDS = ['ai-education', 'engineering', 'business', 'research', 'campus-life'];
-const TIME_FILTER_IDS = ['all', 'now', 'laterToday', 'tomorrow', 'week'];
+const STUDENT_LENS_IDS = ['all', 'ime', 'ai-computing', 'fintech-industry', 'robotics', 'iot', 'cultural-technology', 'chips'];
+const LEGACY_LENS_MAP = {
+  'ai-education': 'ai-computing',
+  engineering: 'ime',
+  business: 'fintech-industry',
+  research: 'all',
+  'campus-life': 'all',
+};
+const TIME_FILTER_IDS = ['all', 'today', 'upcoming', 'week', 'now', 'laterToday', 'tomorrow'];
 
 export const SEARCH_INTENT_SCHEMA = {
   type: 'object',
@@ -35,38 +42,40 @@ export const SEARCH_INTENT_SCHEMA = {
 
 const TYPE_ALIASES = [
   { ids: ['academic', 'forum'], terms: ['lecture', 'talk', '讲座'] },
-  { ids: ['academic'], terms: ['academic', 'seminar', 'workshop', 'class', 'study', '学术', '工作坊', '补课', '答疑'] },
+  { ids: ['academic'], terms: ['academic', 'seminar', 'workshop', 'class', 'study', 'course', 'deadline', '学术', '课程', '作业'] },
   { ids: ['forum'], terms: ['forum', 'conference', 'symposium', 'panel', '论坛', '会议', '圆桌'] },
-  { ids: ['careers'], terms: ['career', 'careers', 'job', 'internship', 'industry', '就业', '招聘', '实习', '行业'] },
-  { ids: ['exhibition'], terms: ['exhibition', 'showcase', 'display', '展览', '展出', '展示'] },
+  { ids: ['careers'], terms: ['career', 'careers', 'job', 'internship', 'industry', 'recruit', '就业', '招聘', '实习', '行业'] },
+  { ids: ['exhibition'], terms: ['exhibition', 'showcase', 'display', '展览', '展示'] },
   { ids: ['student-life'], terms: ['student life', 'club', 'salon', 'tedx', 'social', '学生', '社团', '沙龙', '生活'] },
-  { ids: ['festival'], terms: ['festival', 'bazaar', 'fair', 'coffee', '市集', '节', '嘉年华', '咖啡'] },
+  { ids: ['festival'], terms: ['festival', 'bazaar', 'fair', 'coffee', '市集', '节日', '嘉年华', '咖啡'] },
 ];
 
 const LENS_ALIASES = [
-  { ids: ['ai-education'], terms: ['ai', 'artificial intelligence', 'aied', 'education', 'teaching', 'learning', '人工智能', '智能', '教育', '教学'] },
-  { ids: ['engineering'], terms: ['engineering', 'manufacturing', 'ime', 'robot', 'industry', 'engineer', '工程', '制造', '智能制造', '机器人'] },
-  { ids: ['business'], terms: ['business', 'entrepreneur', 'startup', 'industry', 'management', '商业', '创业', '企业', '产业', '管理'] },
-  { ids: ['research'], terms: ['research', 'paper', 'lab', 'academic', '科研', '研究', '论文', '学术'] },
-  { ids: ['campus-life'], terms: ['campus', 'life', 'student', 'club', 'festival', '校园', '学生', '社团', '活动', '生活'] },
+  { ids: ['all'], terms: ['school-wide', 'all school', 'campus level', 'campus-wide', '全校', '校级'] },
+  { ids: ['ai-computing'], terms: ['ai', 'artificial intelligence', 'advanced computing', 'aied', 'education', 'teaching', 'learning', '人工智能', '先进计算'] },
+  { ids: ['ime'], terms: ['ime', 'manufacturing', 'intelligent manufacturing', 'ecosystem', '智造生态', '智能制造'] },
+  { ids: ['fintech-industry'], terms: ['finance', 'fintech', 'industry integration', 'business', 'entrepreneur', 'startup', '产金融合', '金融'] },
+  { ids: ['robotics'], terms: ['robot', 'robotics', '机器人'] },
+  { ids: ['iot'], terms: ['iot', 'internet of things', '物联网'] },
+  { ids: ['cultural-technology'], terms: ['culture', 'cultural technology', 'media', 'design', 'salon', '文化科技', '文化', '传媒', '设计'] },
+  { ids: ['chips'], terms: ['chip', 'chips', 'semiconductor', '芯片', '半导体'] },
 ];
 
 const TIME_ALIASES = [
-  { id: 'now', terms: ['now', 'right now', 'current', 'currently', '正在', '现在', '此刻', '马上'] },
-  { id: 'laterToday', terms: ['later today', 'tonight', 'this evening', 'today evening', '今天稍晚', '今晚', '今天晚上', '傍晚', '今晚有'] },
-  { id: 'tomorrow', terms: ['tomorrow', 'tmr', '明天', '明日'] },
-  { id: 'week', terms: ['this week', 'week', '本周', '这周', '一周内', '最近'] },
+  { id: 'today', terms: ['today', 'now', 'right now', 'current', 'currently', '今天', '正在', '现在'] },
+  { id: 'upcoming', terms: ['upcoming', 'next', 'later', 'future', '即将', '稍后', '接下来'] },
+  { id: 'week', terms: ['this week', 'next 7 days', 'week', '未来7天', '本周'] },
 ];
 
 const BUILDING_ALIASES = [
-  { id: 'XEC', terms: ['xec', 'xec campus', 'xec校区', 'xec楼'] },
-  { id: 'AB', terms: ['ab', 'a-b', 'ab楼', 'ab building', 'a b building', 'ab lou'] },
-  { id: 'B-C', terms: ['bc', 'b-c', 'bc楼', 'bc building', 'bc lou', 'b c corridor'] },
-  { id: 'A', terms: ['a楼', 'a building', 'a lou'] },
-  { id: 'B', terms: ['b building'] },
-  { id: 'C', terms: ['c楼', 'c building', 'c lou'] },
-  { id: 'J', terms: ['j楼', 'j building', 'j lou', 'students centre', 'student centre'] },
-  { id: 'M', terms: ['m楼', 'm building', 'm lou'] },
+  { id: 'XEC', terms: ['xec', 'xec campus', 'xec map', 'xec校区'] },
+  { id: 'AB', terms: ['ab', 'a-b', 'ab building', 'a b building', 'ab楼'] },
+  { id: 'B-C', terms: ['bc', 'b-c', 'bc building', 'b c corridor', 'bc楼'] },
+  { id: 'A', terms: ['a building', 'a楼'] },
+  { id: 'B', terms: ['b building', 'b楼'] },
+  { id: 'C', terms: ['c building', 'c楼'] },
+  { id: 'J', terms: ['j building', 'j楼', 'students centre', 'student centre'] },
+  { id: 'M', terms: ['m building', 'm楼'] },
 ];
 
 const FLOOR_ALIASES = [
@@ -112,8 +121,8 @@ export function normalizeSearchText(value) {
   return String(value || '')
     .toLowerCase()
     .normalize('NFKC')
-    .replace(/[，。！？、；：]/g, ' ')
-    .replace(/[()（）[\]{}"'`]/g, ' ')
+    .replace(/[，。！？、；:：]/g, ' ')
+    .replace(/[()[\]{}"'`]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -130,6 +139,12 @@ function includesTerm(normalized, compact, term) {
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function normalizeLensId(id) {
+  const value = String(id || '');
+  const migrated = LEGACY_LENS_MAP[value] || value;
+  return STUDENT_LENS_IDS.includes(migrated) ? migrated : '';
 }
 
 function isKnownAliasTerm(term) {
@@ -165,7 +180,7 @@ export function normalizeAgentIntent(query, intent) {
     confidence: Number.isFinite(Number(safeIntent.confidence)) ? Math.max(0, Math.min(1, Number(safeIntent.confidence))) : 0,
     timeFilter: TIME_FILTER_IDS.includes(safeIntent.timeFilter) ? safeIntent.timeFilter : 'all',
     typeIds: unique(Array.isArray(safeIntent.typeIds) ? safeIntent.typeIds.filter((id) => EVENT_TYPE_IDS.includes(id)) : []),
-    lensIds: unique(Array.isArray(safeIntent.lensIds) ? safeIntent.lensIds.filter((id) => STUDENT_LENS_IDS.includes(id)) : []),
+    lensIds: unique(Array.isArray(safeIntent.lensIds) ? safeIntent.lensIds.map(normalizeLensId) : []),
     buildingIds: unique(Array.isArray(safeIntent.buildingIds) ? safeIntent.buildingIds.map((id) => String(id).toUpperCase()) : []),
     locationHints: unique(Array.isArray(safeIntent.locationHints) ? safeIntent.locationHints.map(String) : []),
     floor: typeof safeIntent.floor === 'string' ? safeIntent.floor.toUpperCase() : '',
@@ -285,7 +300,7 @@ export function eventMatchesSearchIntent(event, location, intent) {
   if (intent.typeIds.length > 0 && !intent.typeIds.includes(event.type)) return false;
 
   if (intent.lensIds.length > 0) {
-    const eventLenses = Array.isArray(event.studentLenses) ? event.studentLenses : [];
+    const eventLenses = unique(Array.isArray(event.studentLenses) ? event.studentLenses.map(normalizeLensId) : []);
     if (!intent.lensIds.some((lensId) => eventLenses.includes(lensId))) return false;
   }
 
@@ -305,10 +320,12 @@ export function summarizeSearchIntent(intent, language = 'en') {
   if (!intent?.active) return '';
   const parts = [];
   const timeLabels = {
+    today: language === 'zh' ? '今天' : 'today',
+    upcoming: language === 'zh' ? '即将开始' : 'upcoming',
     now: language === 'zh' ? '正在进行' : 'now',
     laterToday: language === 'zh' ? '今天稍晚' : 'later today',
     tomorrow: language === 'zh' ? '明天' : 'tomorrow',
-    week: language === 'zh' ? '本周' : 'this week',
+    week: language === 'zh' ? '未来7天' : 'next 7 days',
   };
   if (intent.timeFilter && intent.timeFilter !== 'all') parts.push(timeLabels[intent.timeFilter]);
   if (intent.buildingIds?.length) parts.push(intent.buildingIds.join('/'));

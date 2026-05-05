@@ -49,6 +49,7 @@ import {
   getEventType,
   getLocationLabel,
   getStudentLens,
+  normalizeStudentScopeId,
   isPublished,
 } from './data';
 import {
@@ -70,11 +71,10 @@ const ANCHORED_PLAYER_POINT = { x: 79.57916557757815, y: 37.287159379780796 };
 const ANCHORED_PLAYER_HEADING = 0;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_FILTERS = [
-  { id: 'now', label: 'Now', labelZh: '正在进行' },
-  { id: 'laterToday', label: 'Later today', labelZh: '今天稍晚' },
-  { id: 'tomorrow', label: 'Tomorrow', labelZh: '明天' },
-  { id: 'week', label: 'This week', labelZh: '本周' },
-  { id: 'all', label: 'All dates', labelZh: '全部' },
+  { id: 'today', label: 'Today', labelZh: '今天' },
+  { id: 'upcoming', label: 'Upcoming', labelZh: '即将开始' },
+  { id: 'week', label: 'Next 7 days', labelZh: '未来7天' },
+  { id: 'all', label: 'All dates', labelZh: '全部日期' },
 ];
 
 const ADMIN_SESSION_KEY = 'tc-campus-events-admin-session-v1';
@@ -83,6 +83,7 @@ const PERSONAL_ID_KEY = 'tc-campus-events-personal-id-v1';
 const PERSONAL_TASKS_PREFIX = 'tc-campus-events-personal-tasks-v1:';
 const PERSONAL_META_PREFIX = 'tc-campus-events-personal-meta-v1:';
 const PERSONAL_TASK_COLOR = '#6d2fd4';
+const DEFAULT_PERSONAL_SPACE_ID = 'default-personal-space';
 const APP_BASE_PATH = import.meta.env.BASE_URL || '/';
 
 function getAppPath(path = '') {
@@ -105,9 +106,9 @@ const UI_TEXT = {
     recommended: 'Recommended now',
     nextUp: 'Next up',
     nearest: 'Nearest',
-    majorPick: 'For your lens',
+    majorPick: 'For this scope',
     open: 'Open',
-    showNow: 'Show now',
+    showNow: 'Show today',
     showNearest: 'Show nearest',
     place: 'Place',
     eventsHere: 'events here',
@@ -134,13 +135,13 @@ const UI_TEXT = {
     campus: '西浦太仓校区',
     admin: '管理端',
     search: '搜索活动、建筑、组织者',
-    recommended: '现在推荐',
+    recommended: '当前推荐',
     nextUp: '下一场',
     nearest: '离我最近',
-    majorPick: '适合当前方向',
+    majorPick: '当前范围推荐',
     open: '打开',
-    showNow: '看正在进行',
-    showNearest: '看最近地点',
+    showNow: '查看今天',
+    showNearest: '查看最近地点',
     place: '地点',
     eventsHere: '个活动在这里',
     route: '路线',
@@ -250,9 +251,9 @@ function normalizePersonalId(value) {
 
 function readPersonalId() {
   try {
-    return normalizePersonalId(localStorage.getItem(PERSONAL_ID_KEY));
+    return normalizePersonalId(localStorage.getItem(PERSONAL_ID_KEY)) || DEFAULT_PERSONAL_SPACE_ID;
   } catch {
-    return '';
+    return DEFAULT_PERSONAL_SPACE_ID;
   }
 }
 
@@ -272,6 +273,7 @@ function createDefaultPersonalDraft(location = null) {
     locationId: location?.id || '',
     mapPoint: location?.mapPoint ? { ...location.mapPoint } : { x: 74, y: 48 },
     type: 'personal',
+    scopeId: 'all',
     source: 'manual',
     sourceText: '',
   };
@@ -286,6 +288,7 @@ function normalizePersonalTask(task) {
     locationId: String(task.locationId || '').trim(),
     mapPoint: clampPoint(task.mapPoint || { x: 74, y: 48 }),
     type: String(task.type || 'personal'),
+    scopeId: normalizeStudentScopeId(task.scopeId || task.studentLenses?.[0] || 'all'),
     completed: Boolean(task.completed),
     source: String(task.source || 'manual'),
     sourceText: String(task.sourceText || '').slice(0, 1800),
@@ -354,7 +357,7 @@ function writePersonalMeta(personalId, meta) {
 function getPersonalEventState(event, personalMeta) {
   const checkin = personalMeta.eventCheckins?.[event.id];
   return {
-    reminded: Boolean(personalMeta.eventReminders?.[event.id] || personalMeta.reminderTypes?.includes(event.type)),
+    reminded: Boolean(personalMeta.eventReminders?.[event.id]),
     checked: Boolean(checkin?.checked),
     feedback: checkin?.feedback || '',
     checkedAt: checkin?.checkedAt || '',
@@ -369,6 +372,18 @@ function inferPersonalTaskType(text) {
   if (/exhibition|display|showcase|展览|展示/.test(normalized)) return 'exhibition';
   if (/lecture|seminar|workshop|course|deadline|class|tutorial|讲座|课程|作业|截止/.test(normalized)) return 'academic';
   return 'personal';
+}
+
+function inferPersonalTaskScope(text) {
+  const normalized = String(text || '').toLowerCase();
+  if (/ai|advanced computing|人工智能|先进计算/.test(normalized)) return 'ai-computing';
+  if (/manufacturing|ime|智能制造|智造生态/.test(normalized)) return 'ime';
+  if (/finance|fintech|industry integration|business|产金|金融/.test(normalized)) return 'fintech-industry';
+  if (/robot|机器人/.test(normalized)) return 'robotics';
+  if (/iot|internet of things|物联网/.test(normalized)) return 'iot';
+  if (/culture|media|design|cultural technology|文化|传媒|设计/.test(normalized)) return 'cultural-technology';
+  if (/chip|semiconductor|芯片|半导体/.test(normalized)) return 'chips';
+  return 'all';
 }
 
 function padDatePart(value) {
@@ -465,6 +480,7 @@ function parseForwardedEmailTask(emailText, locations) {
     locationId: location?.id || '',
     mapPoint: { ...fallbackPoint },
     type: inferPersonalTaskType(text),
+    scopeId: inferPersonalTaskScope(text),
     source: 'forwarded-email',
     sourceText: text,
   };
@@ -524,6 +540,28 @@ function getPersonalTaskTypeLabel(typeId) {
   return getEventType(typeId).label || 'Personal';
 }
 
+function getScopeLabel(scopeId, language = 'en', compact = false) {
+  const scope = getStudentLens(normalizeStudentScopeId(scopeId));
+  if (language === 'zh') return compact ? scope.shortLabelZh || scope.labelZh || scope.shortLabel : scope.labelZh || scope.label;
+  return compact ? scope.shortLabel : scope.label;
+}
+
+function getFilterablePersonalTask(task) {
+  return {
+    title: task.title,
+    summary: task.note,
+    organizer: 'Personal Space',
+    audience: 'Private',
+    registration: '',
+    sourceLabel: task.source,
+    type: task.type,
+    startTime: task.dueTime,
+    endTime: task.dueTime,
+    locationId: task.locationId,
+    studentLenses: [normalizeStudentScopeId(task.scopeId)],
+  };
+}
+
 function clampPoint(point) {
   return {
     x: Math.min(98, Math.max(2, point.x)),
@@ -543,8 +581,10 @@ function useNow(intervalMs = 60000) {
 }
 
 function getEventWindow(event) {
-  const start = event.startTime ? new Date(event.startTime).getTime() : null;
-  const end = event.endTime ? new Date(event.endTime).getTime() : start;
+  const startValue = event.startTime || event.dueTime;
+  const endValue = event.endTime || event.dueTime || event.startTime;
+  const start = startValue ? new Date(startValue).getTime() : null;
+  const end = endValue ? new Date(endValue).getTime() : start;
   return { start, end };
 }
 
@@ -564,6 +604,14 @@ function eventOverlaps(event, startMs, endMs) {
 
 function eventFitsTime(event, timeFilter, now) {
   if (timeFilter === 'all') return true;
+  if (timeFilter === 'today') {
+    const bounds = dayBounds(now);
+    return eventOverlaps(event, bounds.start, bounds.end);
+  }
+  if (timeFilter === 'upcoming') {
+    const eventWindow = getEventWindow(event);
+    return eventWindow.end != null && eventWindow.end >= now;
+  }
   if (timeFilter === 'now') {
     const eventWindow = getEventWindow(event);
     return eventWindow.start != null && eventWindow.start <= now && (eventWindow.end ?? eventWindow.start) >= now;
@@ -582,7 +630,7 @@ function eventFitsTime(event, timeFilter, now) {
 }
 
 function getPrimaryTimeFilter(events, now) {
-  return ['now', 'laterToday', 'tomorrow', 'week'].find((filterId) => events.some((event) => eventFitsTime(event, filterId, now))) || 'all';
+  return ['today', 'upcoming', 'week'].find((filterId) => events.some((event) => eventFitsTime(event, filterId, now))) || 'all';
 }
 
 function getTimeFilterLabel(filterId, language) {
@@ -590,20 +638,20 @@ function getTimeFilterLabel(filterId, language) {
   return language === 'zh' ? filter.labelZh : filter.label;
 }
 
-function getTimeActionLabel(filterId, language, t) {
-  if (filterId === 'now') return t('showNow');
-  return language === 'zh' ? `打开${getTimeFilterLabel(filterId, language)}` : `Show ${getTimeFilterLabel(filterId, language)}`;
+function getTimeActionLabel(filterId, language) {
+  if (filterId === 'today') return language === 'zh' ? '查看今天' : 'Show today';
+  return language === 'zh' ? '打开' + getTimeFilterLabel(filterId, language) : 'Show ' + getTimeFilterLabel(filterId, language);
 }
 
 function getEventStatus(event, now, language = 'en') {
   const eventWindow = getEventWindow(event);
-  if (eventWindow.start == null) return { label: language === 'zh' ? '时间未定' : 'Time not set', tone: 'muted' };
+  if (eventWindow.start == null || Number.isNaN(eventWindow.start)) return { label: language === 'zh' ? '时间未定' : 'Time not set', tone: 'muted' };
   const end = eventWindow.end ?? eventWindow.start;
   if (eventWindow.start <= now && end >= now) return { label: language === 'zh' ? '进行中' : 'Now', tone: 'live' };
   if (eventWindow.start > now) {
     const days = Math.ceil((eventWindow.start - now) / DAY_MS);
     if (days <= 1) return { label: language === 'zh' ? '即将开始' : 'Soon', tone: 'soon' };
-    return { label: language === 'zh' ? `${days} 天后` : `${days}d away`, tone: 'upcoming' };
+    return { label: language === 'zh' ? days + ' 天后' : days + 'd away', tone: 'upcoming' };
   }
   return { label: language === 'zh' ? '已结束' : 'Ended', tone: 'muted' };
 }
@@ -616,14 +664,14 @@ function formatUpdatedAt(value, now, language = 'en') {
   if (diff < 60 * 1000) return language === 'zh' ? '刚刚更新' : 'Updated just now';
   if (diff < 60 * 60 * 1000) {
     const mins = Math.floor(diff / 60000);
-    return language === 'zh' ? `${mins} 分钟前更新` : `Updated ${mins}m ago`;
+    return language === 'zh' ? mins + ' 分钟前更新' : 'Updated ' + mins + 'm ago';
   }
   if (diff < DAY_MS) {
     const hours = Math.floor(diff / 3600000);
-    return language === 'zh' ? `${hours} 小时前更新` : `Updated ${hours}h ago`;
+    return language === 'zh' ? hours + ' 小时前更新' : 'Updated ' + hours + 'h ago';
   }
   const days = Math.floor(diff / DAY_MS);
-  return language === 'zh' ? `${days} 天前更新` : `Updated ${days}d ago`;
+  return language === 'zh' ? days + ' 天前更新' : 'Updated ' + days + 'd ago';
 }
 
 function getMapDistance(from, to) {
@@ -635,7 +683,7 @@ function getRouteSummary(from, location, language = 'en') {
   const distance = getMapDistance(from, location?.mapPoint);
   if (distance == null) return language === 'zh' ? '开启实时定位后可比较距离。' : 'Enable live location to compare distance.';
   if (distance < 8) return language === 'zh' ? '离你当前位置很近。' : 'Very close from your current point.';
-  if (distance < 18) return language === 'zh' ? '校园内短距离步行。' : 'Short walk across this part of campus.';
+  if (distance < 18) return language === 'zh' ? '校内短距离步行。' : 'Short walk across this part of campus.';
   if (distance < 32) return language === 'zh' ? '中等距离，建议结合入口提示。' : 'Medium campus walk; use the entrance hint.';
   return language === 'zh' ? '跨校区距离，请预留更多步行时间。' : 'Across campus; allow extra walking time.';
 }
@@ -667,6 +715,36 @@ function filterEvents(events, locations, { query, type, lens = 'all', time = 'al
     .filter((event) => eventMatchesSearchIntent(event, locationsById.get(event.locationId), searchIntent))
     .filter((event) => (usesStructuredSearch ? true : eventMatches(event, locationsById.get(event.locationId), query)))
     .sort((first, second) => new Date(first.startTime || 0) - new Date(second.startTime || 0));
+}
+
+function personalTaskMatches(task, location, query) {
+  if (!query.trim()) return true;
+  const needle = query.toLowerCase();
+  return [
+    task.title,
+    task.note,
+    task.source,
+    getPersonalTaskTypeLabel(task.type),
+    getScopeLabel(task.scopeId),
+    location ? getLocationLabel(location) : 'Custom point',
+  ]
+    .join(' ')
+    .toLowerCase()
+    .includes(needle);
+}
+
+function filterPersonalTasks(tasks, locations, { query, type, lens = 'all', time = 'all', now = 0, searchIntent }) {
+  const locationsById = new Map(locations.map((location) => [location.id, location]));
+  const effectiveTime = searchIntent?.timeFilter && searchIntent.timeFilter !== 'all' ? searchIntent.timeFilter : time;
+  const usesStructuredSearch = Boolean(searchIntent?.active);
+  return tasks
+    .filter((task) => !task.completed)
+    .filter((task) => (type === 'all' ? true : task.type === type))
+    .filter((task) => eventFitsLens(getFilterablePersonalTask(task), lens))
+    .filter((task) => eventFitsTime(getFilterablePersonalTask(task), effectiveTime, now))
+    .filter((task) => eventMatchesSearchIntent(getFilterablePersonalTask(task), locationsById.get(task.locationId), searchIntent))
+    .filter((task) => (usesStructuredSearch ? true : personalTaskMatches(task, locationsById.get(task.locationId), query)))
+    .sort((first, second) => new Date(first.dueTime || first.createdAt) - new Date(second.dueTime || second.createdAt));
 }
 
 function useCampusData() {
@@ -736,14 +814,18 @@ function CampusMap({
   admin = false,
   editMode = false,
   onMoveLocation,
+  onMovePersonalTask,
   onLocationSnapshot,
   language = 'en',
   t = (key) => getText('en', key),
 }) {
   const mapRef = useRef(null);
   const dragRef = useRef(null);
+  const personalDragRef = useRef(null);
+  const suppressPersonalClickRef = useRef(null);
   const currentLocationRef = useRef(null);
   const [draggingId, setDraggingId] = useState(null);
+  const [personalDraggingId, setPersonalDraggingId] = useState(null);
   const [locatorOn, setLocatorOn] = useState(!admin);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [geoStatus, setGeoStatus] = useState(() =>
@@ -848,6 +930,26 @@ function CampusMap({
     setDraggingId(location.id);
   };
 
+  const startPersonalTaskDrag = (event, task) => {
+    if (admin || !personalMode || !onMovePersonalTask) return;
+    if (event.button != null && event.button !== 0) return;
+    const point = getPointFromEvent(event);
+    if (!point) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    personalDragRef.current = {
+      taskId: task.id,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      startPoint: point,
+      originalPoint: { ...(task.mapPoint || point) },
+      moved: false,
+    };
+    setPersonalDraggingId(task.id);
+  };
+
   useEffect(() => {
     const handleMove = (event) => {
       const drag = dragRef.current;
@@ -881,6 +983,49 @@ function CampusMap({
       window.removeEventListener('pointercancel', handleEnd);
     };
   }, [getPointFromEvent, onMoveLocation]);
+
+  useEffect(() => {
+    const handleMove = (event) => {
+      const drag = personalDragRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const distance = Math.hypot(event.clientX - drag.startClient.x, event.clientY - drag.startClient.y);
+      if (distance > 3) drag.moved = true;
+      if (!drag.moved) return;
+
+      const point = getPointFromEvent(event);
+      if (!point) return;
+      event.preventDefault();
+      onMovePersonalTask?.(
+        drag.taskId,
+        clampPoint({
+          x: drag.originalPoint.x + (point.x - drag.startPoint.x),
+          y: drag.originalPoint.y + (point.y - drag.startPoint.y),
+        }),
+      );
+    };
+
+    const handleEnd = (event) => {
+      const drag = personalDragRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      if (drag.moved) {
+        suppressPersonalClickRef.current = drag.taskId;
+        window.setTimeout(() => {
+          if (suppressPersonalClickRef.current === drag.taskId) suppressPersonalClickRef.current = null;
+        }, 250);
+      }
+      personalDragRef.current = null;
+      setPersonalDraggingId(null);
+    };
+
+    window.addEventListener('pointermove', handleMove, { passive: false });
+    window.addEventListener('pointerup', handleEnd);
+    window.addEventListener('pointercancel', handleEnd);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+    };
+  }, [getPointFromEvent, onMovePersonalTask]);
 
   useEffect(() => {
     currentLocationRef.current = currentLocation;
@@ -1129,23 +1274,40 @@ function CampusMap({
                   {!admin &&
                     personalTaskStacks.map((stack) => {
                       const selected = stack.tasks.some((task) => task.id === selectedPersonalTaskId);
+                      const primaryTask = stack.tasks[0];
+                      const typeIds = [...new Set(stack.tasks.map((task) => task.type))];
+                      const mixedTypes = typeIds.length > 1;
+                      const type = primaryTask.type === 'personal' ? { color: PERSONAL_TASK_COLOR } : getEventType(primaryTask.type);
                       return (
                         <button
                           key={`personal-${stack.location.id}`}
-                          className={`personal-task-marker ${selected ? 'selected' : ''}`}
+                          className={`personal-task-marker ${selected ? 'selected' : ''} ${personalDraggingId === primaryTask.id ? 'dragging' : ''}`}
                           style={{
                             left: `${stack.location.mapPoint.x}%`,
                             top: `${stack.location.mapPoint.y}%`,
-                            '--personal-color': PERSONAL_TASK_COLOR,
+                            '--personal-color': type.color,
                           }}
+                          onPointerDown={(event) => startPersonalTaskDrag(event, primaryTask)}
                           onClick={(event) => {
                             event.stopPropagation();
-                            onSelectPersonalTask?.(stack.tasks[0].id, stack.location.id);
+                            if (suppressPersonalClickRef.current === primaryTask.id) {
+                              suppressPersonalClickRef.current = null;
+                              return;
+                            }
+                            onSelectPersonalTask?.(primaryTask.id, stack.location.id);
                           }}
                           title={`${stack.tasks.length} personal task${stack.tasks.length === 1 ? '' : 's'} at ${getLocationLabel(stack.location)}`}
                         >
-                          <span className="personal-task-pin">
-                            <ClipboardCheck size={18} />
+                          <span className={`personal-task-pin ${mixedTypes ? 'mixed' : ''}`}>
+                            {mixedTypes ? (
+                              typeIds.slice(0, 3).map((typeId) => (
+                                <span key={typeId} className="mini-type-icon">
+                                  <EventTypeIcon typeId={typeId} size={12} />
+                                </span>
+                              ))
+                            ) : (
+                              <EventTypeIcon typeId={primaryTask.type} size={18} />
+                            )}
                             {stack.tasks.length > 1 && <b>{stack.tasks.length}</b>}
                           </span>
                         </button>
@@ -1197,7 +1359,7 @@ function CampusMap({
                         title={geoError || (locatorOn ? 'Hide current position' : 'Show live current position')}
                       >
                         <LocateFixed size={17} />
-                        <span>{locatorOn ? positionLabel : language === 'zh' ? '定位关闭' : 'Position off'}</span>
+                        <span>{locatorOn ? positionLabel : language === 'zh' ? '鐎规矮缍呴崗鎶芥４' : 'Position off'}</span>
                       </button>
                       <button
                         className={orientationStatus === 'active' ? 'active' : ''}
@@ -1240,8 +1402,7 @@ function StudentApp({ data }) {
   const [language, setLanguage] = useState('en');
   const [sheetMode, setSheetMode] = useState('half');
   const [agentSearch, setAgentSearch] = useState({ status: 'idle', source: 'local', intent: createLocalSearchIntent('') });
-  const [personalId, setPersonalIdState] = useState(readPersonalId);
-  const [personalIdDraft, setPersonalIdDraft] = useState(() => readPersonalId());
+  const [personalId] = useState(readPersonalId);
   const [personalTasks, setPersonalTasks] = useState(() => readPersonalTasks(readPersonalId()));
   const [personalMeta, setPersonalMeta] = useState(() => readPersonalMeta(readPersonalId()));
   const [personalTaskDraft, setPersonalTaskDraft] = useState(() => createDefaultPersonalDraft());
@@ -1279,7 +1440,19 @@ function StudentApp({ data }) {
   const publishedEvents = studentEvents;
   const selectedPersonalTask = personalTasks.find((task) => task.id === selectedPersonalTaskId) || null;
   const openPersonalTasks = useMemo(() => personalTasks.filter((task) => !task.completed), [personalTasks]);
-  const visiblePersonalTasks = personalMode ? openPersonalTasks : [];
+  const filteredPersonalTasks = useMemo(
+    () =>
+      filterPersonalTasks(openPersonalTasks, data.locations, {
+        query,
+        type: typeFilter,
+        lens: lensFilter,
+        time: timeFilter,
+        now,
+        searchIntent: effectiveSearchIntent,
+      }),
+    [openPersonalTasks, data.locations, query, typeFilter, lensFilter, timeFilter, now, effectiveSearchIntent],
+  );
+  const visiblePersonalTasks = personalMode ? filteredPersonalTasks : [];
   const selectedLocationPersonalTasks = selectedLocation
     ? visiblePersonalTasks.filter((task) => task.locationId === selectedLocation.id)
     : [];
@@ -1287,42 +1460,26 @@ function StudentApp({ data }) {
   const remindedEventCount = visibleEvents.filter((event) => getPersonalEventState(event, personalMeta).reminded).length;
   const lensCounts = useMemo(() => {
     const counts = new Map();
+    const countable = personalMode ? [...publishedEvents, ...openPersonalTasks.map(getFilterablePersonalTask)] : publishedEvents;
     STUDENT_LENSES.forEach((lens) => {
-      counts.set(lens.id, publishedEvents.filter((event) => eventFitsLens(event, lens.id)).length);
+      counts.set(lens.id, countable.filter((event) => eventFitsLens(event, lens.id)).length);
     });
     return counts;
-  }, [publishedEvents]);
+  }, [openPersonalTasks, personalMode, publishedEvents]);
   const timeCounts = useMemo(() => {
     const counts = new Map();
+    const countable = personalMode ? [...publishedEvents, ...openPersonalTasks.map(getFilterablePersonalTask)] : publishedEvents;
     TIME_FILTERS.forEach((filter) => {
-      counts.set(filter.id, publishedEvents.filter((event) => eventFitsTime(event, filter.id, now)).length);
+      counts.set(filter.id, countable.filter((event) => eventFitsTime(event, filter.id, now)).length);
     });
     return counts;
-  }, [now, publishedEvents]);
+  }, [now, openPersonalTasks, personalMode, publishedEvents]);
   const updatedLabel = formatUpdatedAt(data.updatedAt, now, language);
-
-  const updatePersonalId = useCallback((value) => {
-    const normalized = normalizePersonalId(value);
-    setPersonalIdDraft(normalized);
-    setPersonalIdState(normalized);
-    setSelectedPersonalTaskId(null);
-    if (normalized) {
-      localStorage.setItem(PERSONAL_ID_KEY, normalized);
-      setPersonalTasks(readPersonalTasks(normalized));
-      setPersonalMeta(readPersonalMeta(normalized));
-      setPersonalNotice(`Personal Space active: ${normalized}`);
-    } else {
-      localStorage.removeItem(PERSONAL_ID_KEY);
-      setPersonalTasks([]);
-      setPersonalMeta(normalizePersonalMeta());
-      setPersonalNotice('Personal Space cleared.');
-    }
-  }, []);
 
   const updatePersonalMeta = useCallback(
     (producer) => {
       if (!personalId) {
-        setPersonalNotice('Name your Personal Space before saving reminders or check-ins.');
+        setPersonalNotice('Personal Space is preparing. Try again in a moment.');
         return normalizePersonalMeta();
       }
       let nextMeta = normalizePersonalMeta();
@@ -1334,18 +1491,6 @@ function StudentApp({ data }) {
       return nextMeta;
     },
     [personalId],
-  );
-
-  const toggleReminderType = useCallback(
-    (typeId) => {
-      updatePersonalMeta((current) => {
-        const currentTypes = new Set(current.reminderTypes || []);
-        if (currentTypes.has(typeId)) currentTypes.delete(typeId);
-        else currentTypes.add(typeId);
-        return { ...current, reminderTypes: [...currentTypes] };
-      });
-    },
-    [updatePersonalMeta],
   );
 
   const toggleEventReminder = useCallback(
@@ -1405,7 +1550,7 @@ function StudentApp({ data }) {
   const updatePersonalTasks = useCallback(
     (producer) => {
       if (!personalId) {
-        setPersonalNotice('Name your Personal Space before adding private tasks.');
+        setPersonalNotice('Personal Space is preparing. Try again in a moment.');
         return [];
       }
       let nextTasks = [];
@@ -1422,7 +1567,7 @@ function StudentApp({ data }) {
   const createPersonalTask = useCallback(
     (draft) => {
       if (!personalId) {
-        setPersonalNotice('Name your Personal Space before adding private tasks.');
+        setPersonalNotice('Personal Space is preparing. Try again in a moment.');
         return null;
       }
       const draftLocation = locationsById.get(draft.locationId);
@@ -1486,11 +1631,9 @@ function StudentApp({ data }) {
     setPersonalMode(true);
     setPersonalSpaceOpen(true);
     setPersonalNotice(
-      personalId
-        ? 'AI draft ready. Check the title, time, location, and coordinates before saving.'
-        : 'AI draft ready. Name your Personal Space before saving it.',
+      'AI draft ready. Check the title, time, location, scope, and theme before saving.',
     );
-  }, [data.locations, forwardedEmail, personalId]);
+  }, [data.locations, forwardedEmail]);
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -1645,52 +1788,55 @@ function StudentApp({ data }) {
           ))}
         </div>
         <div className="student-tools">
-        <div className="smart-search">
-          <label className="search-box">
-            <Search size={17} />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('search')} />
-          </label>
-          {query.trim() && (
-            <div className={`agent-search-status ${agentSearch.status}`}>
-              <span>{searchSourceLabel}</span>
-              <strong>{searchIntentSummary || (language === 'zh' ? '按关键词搜索' : 'Keyword search')}</strong>
-            </div>
-          )}
-        </div>
-        <div className="lens-strip" aria-label="Student major filters">
-          {STUDENT_LENSES.map((lens) => (
+          <div className="smart-search">
+            <label className="search-box">
+              <Search size={17} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('search')} />
+            </label>
+            {query.trim() && (
+              <div className={`agent-search-status ${agentSearch.status}`}>
+                <span>{searchSourceLabel}</span>
+                <strong>{searchIntentSummary || (language === 'zh' ? '按关键词搜索' : 'Keyword search')}</strong>
+              </div>
+            )}
+          </div>
+          <div className="lens-strip" aria-label="College and school-wide filters">
+            {STUDENT_LENSES.map((lens) => (
+              <button
+                key={lens.id}
+                className={lensFilter === lens.id ? 'active' : ''}
+                onClick={() => setLensFilter(lens.id)}
+                title={language === 'zh' ? lens.labelZh : lens.label}
+              >
+                <span>{language === 'zh' ? lens.shortLabelZh || lens.labelZh : lens.shortLabel}</span>
+                <b>{lensCounts.get(lens.id) || 0}</b>
+              </button>
+            ))}
+          </div>
+          <div className="theme-dock" aria-label="Theme filters">
             <button
-              key={lens.id}
-              className={lensFilter === lens.id ? 'active' : ''}
-              onClick={() => setLensFilter(lens.id)}
+              className={typeFilter === 'all' ? 'active' : ''}
+              onClick={() => setTypeFilter('all')}
+              title="All themes"
+              aria-label="All themes"
             >
-              <span>{lens.shortLabel}</span>
-              <b>{lensCounts.get(lens.id) || 0}</b>
+              <Sparkles size={16} />
+              <span>{language === 'zh' ? '閸忋劑鍎存稉濠氼暯' : 'All themes'}</span>
             </button>
-          ))}
-        </div>
-        <div className="theme-dock" aria-label="Theme filters">
-          <button
-            className={typeFilter === 'all' ? 'active' : ''}
-            onClick={() => setTypeFilter('all')}
-            title="All themes"
-            aria-label="All themes"
-          >
-            <Sparkles size={17} />
-          </button>
-          {EVENT_TYPES.map((type) => (
-            <button
-              key={type.id}
-              className={typeFilter === type.id ? 'active' : ''}
-              onClick={() => setTypeFilter(type.id)}
-              title={type.label}
-              aria-label={type.label}
-              style={{ '--type-color': type.color }}
-            >
-              <EventTypeIcon typeId={type.id} size={17} />
-            </button>
-          ))}
-        </div>
+            {EVENT_TYPES.map((type) => (
+              <button
+                key={type.id}
+                className={typeFilter === type.id ? 'active' : ''}
+                onClick={() => setTypeFilter(type.id)}
+                title={type.label}
+                aria-label={type.label}
+                style={{ '--type-color': type.color }}
+              >
+                <EventTypeIcon typeId={type.id} size={16} />
+                <span>{type.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -1768,6 +1914,10 @@ function StudentApp({ data }) {
             setSelectedLocationId(locationId);
             setSheetMode('half');
           }}
+          onMovePersonalTask={(taskId, mapPoint) => {
+            updatePersonalTask(taskId, { mapPoint, locationId: '' });
+            setSelectedPersonalTaskId(taskId);
+          }}
         />
 
         <aside className={`student-panel sheet-${sheetMode}`}>
@@ -1840,11 +1990,8 @@ function StudentApp({ data }) {
       <PersonalSpaceDrawer
         open={personalSpaceOpen}
         onClose={() => setPersonalSpaceOpen(false)}
-        personalId={personalId}
-        personalIdDraft={personalIdDraft}
-        setPersonalIdDraft={setPersonalIdDraft}
-        onUsePersonalId={() => updatePersonalId(personalIdDraft)}
         tasks={personalTasks}
+        visibleTaskCount={visiblePersonalTasks.length}
         selectedTask={selectedPersonalTask}
         selectedTaskId={selectedPersonalTaskId}
         locations={data.locations}
@@ -1856,7 +2003,6 @@ function StudentApp({ data }) {
         now={now}
         personalMode={personalMode}
         aiDraftReady={aiDraftReady}
-        personalMeta={personalMeta}
         remindedEventCount={remindedEventCount}
         checkedEventCount={checkedEventCount}
         onEnterPersonalMode={() => setPersonalMode(true)}
@@ -1864,7 +2010,6 @@ function StudentApp({ data }) {
           setPersonalMode(false);
           setSelectedPersonalTaskId(null);
         }}
-        onToggleReminderType={toggleReminderType}
         onCreateTask={submitPersonalTaskDraft}
         onCreateFromEmail={createTaskFromForwardedEmail}
         onSelectTask={(task) => {
@@ -1945,10 +2090,7 @@ function RecommendationRail({
   const nearestStack = stacks
     .map((stack) => ({ ...stack, distance: getMapDistance(locationSnapshot?.point, stack.location.mapPoint) ?? Infinity }))
     .sort((first, second) => first.distance - second.distance)[0];
-  const lensEvent =
-    lensFilter === 'all'
-      ? futureEvents.find((event) => getEventLenses(event).includes('engineering')) || futureEvents[0]
-      : futureEvents.find((event) => eventFitsLens(event, lensFilter));
+  const lensEvent = futureEvents.find((event) => eventFitsLens(event, lensFilter)) || futureEvents[0];
   const primaryTimeFilter = getPrimaryTimeFilter(events, now);
 
   const cards = [
@@ -1956,7 +2098,7 @@ function RecommendationRail({
       id: 'next',
       label: t('nextUp'),
       title: nextEvent?.title || t('noEvents'),
-      meta: nextEvent ? `${formatEventTime(nextEvent)} · ${getEventStatus(nextEvent, now, language).label}` : t('tryFilters'),
+      meta: nextEvent ? `${formatEventTime(nextEvent)} / ${getEventStatus(nextEvent, now, language).label}` : t('tryFilters'),
       icon: <Clock size={16} />,
       action: () => nextEvent && onSelectEvent(nextEvent),
     },
@@ -1965,7 +2107,7 @@ function RecommendationRail({
       label: t('nearest'),
       title: nearestStack ? getLocationLabel(nearestStack.location) : t('nearestHint'),
       meta: nearestStack
-        ? `${getRouteSummary(locationSnapshot?.point, nearestStack.location, language)} · ${nearestStack.events.length} ${
+        ? `${getRouteSummary(locationSnapshot?.point, nearestStack.location, language)} / ${nearestStack.events.length} ${
             language === 'zh' ? '个活动' : 'events'
           }`
         : '',
@@ -1988,7 +2130,7 @@ function RecommendationRail({
         <span className="eyebrow">{t('recommended')}</span>
         <button onClick={() => onTimeFilter(primaryTimeFilter)} disabled={events.length === 0}>
           <Clock size={15} />
-          {getTimeActionLabel(primaryTimeFilter, language, t)}
+          {getTimeActionLabel(primaryTimeFilter, language)}
         </button>
       </div>
       <div className="recommendation-cards">
@@ -2063,6 +2205,7 @@ function CampusAgentWidget({
       locationId: taskLocation?.id || '',
       mapPoint: taskLocation?.mapPoint || { x: 74, y: 48 },
       type: inferPersonalTaskType(text),
+      scopeId: inferPersonalTaskScope(text),
       source: 'agent',
       sourceText: text,
     });
@@ -2096,11 +2239,9 @@ function CampusAgentWidget({
       .slice(0, 2);
 
     if (/personal|private|mine|my|提醒|个人|私人|打卡|反馈/.test(normalized)) {
-      return personalId
-        ? `Your active Personal Space is ${personalId}. You have ${openPersonalTasks.length} open personal event${
-            openPersonalTasks.length === 1 ? '' : 's'
-          }. SMART Agent can add private personal events, reminders, and check-ins, but it cannot publish public/Admin events.`
-        : 'Name a Personal Space first, then SMART Agent can help you add private personal events, reminders, and check-ins. It cannot publish public/Admin events.';
+      return `Personal Space is active as a private map layer on this browser. You have ${openPersonalTasks.length} open personal event${
+        openPersonalTasks.length === 1 ? '' : 's'
+      }. SMART Agent can add private personal events, reminders, and check-ins, but it cannot publish public/Admin events.`;
     }
 
     if (/route|where|how to get|navigate|路线|怎么去|在哪/.test(normalized) && selectedLocation) {
@@ -2206,7 +2347,7 @@ function CampusAgentWidget({
     { id: 'ask', label: 'Ask', icon: <MessageSquareText size={15} /> },
     { id: 'brief', label: language === 'zh' ? '概览' : 'Brief', icon: <Compass size={15} /> },
     { id: 'nearby', label: language === 'zh' ? '附近' : 'Near', icon: <Navigation size={15} /> },
-    { id: 'major', label: language === 'zh' ? '专业' : 'Major', icon: <GraduationCap size={15} /> },
+    { id: 'major', label: language === 'zh' ? '范围' : 'Scope', icon: <GraduationCap size={15} /> },
     { id: 'route', label: language === 'zh' ? '路线' : 'Route', icon: <Route size={15} /> },
     { id: 'personal', label: 'Mine', icon: <ClipboardCheck size={15} /> },
   ];
@@ -2298,12 +2439,12 @@ function CampusAgentWidget({
                 {busiestStack && (
                   <p>
                     {language === 'zh' ? '活动最多地点：' : 'Busiest place: '}
-                    {getLocationLabel(busiestStack.location)} · {busiestStack.events.length}
+                    {getLocationLabel(busiestStack.location)} / {busiestStack.events.length}
                     {language === 'zh' ? ' 个活动' : ` event${busiestStack.events.length === 1 ? '' : 's'}`}.
                   </p>
                 )}
                 <div className="agent-actions">
-                  <button onClick={() => setTimeFilter(primaryTimeFilter)}>{getTimeActionLabel(primaryTimeFilter, language, t)}</button>
+                  <button onClick={() => setTimeFilter(primaryTimeFilter)}>{getTimeActionLabel(primaryTimeFilter, language)}</button>
                   {nextEvent && <button onClick={() => setSelectedEventId(nextEvent.id)}>{t('open')}</button>}
                 </div>
               </>
@@ -2329,16 +2470,16 @@ function CampusAgentWidget({
 
             {mode === 'major' && (
               <>
-                <strong>{currentLens.label}</strong>
+                <strong>{language === 'zh' ? currentLens.labelZh || currentLens.label : currentLens.label}</strong>
                 <p>
                   {language === 'zh'
-                    ? '先按专业方向筛，再用右侧主题图标收窄。'
-                    : 'Use a student lens first, then narrow by theme icons on the right.'}
+                    ? '先按全校或学院范围筛选，再用主题按钮继续缩小结果。'
+                    : 'Filter by school-wide or college scope, then narrow the map with theme buttons.'}
                 </p>
                 <div className="agent-lens-grid">
                   {STUDENT_LENSES.map((lens) => (
                     <button key={lens.id} className={lensFilter === lens.id ? 'active' : ''} onClick={() => setLensFilter(lens.id)}>
-                      {lens.shortLabel}
+                      {language === 'zh' ? lens.shortLabelZh || lens.labelZh : lens.shortLabel}
                     </button>
                   ))}
                 </div>
@@ -2360,13 +2501,11 @@ function CampusAgentWidget({
 
             {mode === 'personal' && (
               <>
-                <strong>{personalId ? `${openPersonalTasks.length} personal events in ${personalId}` : 'Name your Personal Space first'}</strong>
+                <strong>{`${openPersonalTasks.length} personal events in your private layer`}</strong>
                 <p>
-                  {personalId
-                    ? nextPersonalTask
-                      ? `Next: ${nextPersonalTask.title} / ${formatPersonalTaskDue(nextPersonalTask)}.`
-                      : 'Your personal space is ready. Add a private event from a note or forwarded email.'
-                    : 'Personal events are private to the custom space you define on this device.'}
+                  {nextPersonalTask
+                    ? `Next: ${nextPersonalTask.title} / ${formatPersonalTaskDue(nextPersonalTask)}.`
+                    : 'Your Personal Space is ready. Add a private event from a note or forwarded email.'}
                 </p>
                 <textarea
                   rows={3}
@@ -2375,7 +2514,7 @@ function CampusAgentWidget({
                   placeholder="Ask SMART Agent to add a private event, e.g. remind me to submit coursework in AB2002 on 2026-05-23 18:00"
                 />
                 <div className="agent-actions">
-                  <button onClick={addAgentPersonalTask} disabled={!personalId || !taskPrompt.trim()}>
+                  <button onClick={addAgentPersonalTask} disabled={!taskPrompt.trim()}>
                     Add personal event
                   </button>
                   {nextPersonalTask && <button onClick={() => onSelectPersonalTask(nextPersonalTask.id)}>Open next</button>}
@@ -2397,11 +2536,8 @@ function CampusAgentWidget({
 function PersonalSpaceDrawer({
   open,
   onClose,
-  personalId,
-  personalIdDraft,
-  setPersonalIdDraft,
-  onUsePersonalId,
   tasks,
+  visibleTaskCount,
   selectedTask,
   selectedTaskId,
   locations,
@@ -2413,12 +2549,10 @@ function PersonalSpaceDrawer({
   now,
   personalMode,
   aiDraftReady,
-  personalMeta,
   remindedEventCount,
   checkedEventCount,
   onEnterPersonalMode,
   onExitPersonalMode,
-  onToggleReminderType,
   onCreateTask,
   onCreateFromEmail,
   onSelectTask,
@@ -2436,15 +2570,6 @@ function PersonalSpaceDrawer({
       mapPoint: location?.mapPoint ? { ...location.mapPoint } : current.mapPoint || { x: 74, y: 48 },
     }));
   };
-  const updateDraftPoint = (axis, value) => {
-    setTaskDraft((current) => ({
-      ...current,
-      mapPoint: clampPoint({
-        ...(current.mapPoint || { x: 74, y: 48 }),
-        [axis]: Number(value) || 0,
-      }),
-    }));
-  };
 
   return (
     <aside className={`personal-space-drawer ${open ? 'open' : ''}`} aria-hidden={!open}>
@@ -2455,21 +2580,10 @@ function PersonalSpaceDrawer({
           </span>
           <span>
             <strong>Personal Space</strong>
-            <small>{personalId ? `Custom space: ${personalId}` : 'Name your own task space'}</small>
+            <small>Private map layer on this browser</small>
           </span>
           <button className="icon-button-lite" onClick={onClose} aria-label="Close Personal Space">
             <X size={16} />
-          </button>
-        </div>
-
-        <div className="personal-id-row">
-          <input
-            value={personalIdDraft}
-            onChange={(event) => setPersonalIdDraft(normalizePersonalId(event.target.value))}
-            placeholder="e.g. finals-plan, society-week"
-          />
-          <button className="ghost-button small" onClick={onUsePersonalId}>
-            Use space
           </button>
         </div>
 
@@ -2477,7 +2591,7 @@ function PersonalSpaceDrawer({
           <div>
             <strong>{personalMode ? 'Personal map layer is on' : 'Personal map layer is off'}</strong>
             <small>
-              {openTasks.length} personal event{openTasks.length === 1 ? '' : 's'} / {remindedEventCount} reminders /{' '}
+              {visibleTaskCount} visible of {openTasks.length} personal event{openTasks.length === 1 ? '' : 's'} / {remindedEventCount} reminders /{' '}
               {checkedEventCount} check-ins
             </small>
           </div>
@@ -2485,26 +2599,6 @@ function PersonalSpaceDrawer({
             {personalMode ? 'Exit mode' : 'Enter mode'}
           </button>
         </div>
-
-        <section className="reminder-theme-card">
-          <div className="personal-list-title">
-            <span>Reminder themes</span>
-            <span>{personalMeta.reminderTypes.length} selected</span>
-          </div>
-          <div className="theme-reminder-grid">
-            {EVENT_TYPES.map((type) => (
-              <button
-                key={type.id}
-                className={personalMeta.reminderTypes.includes(type.id) ? 'active' : ''}
-                onClick={() => onToggleReminderType(type.id)}
-                style={{ '--type-color': type.color }}
-              >
-                <EventTypeIcon typeId={type.id} size={15} />
-                <span>{type.label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
 
         {notice && <div className="personal-notice">{notice}</div>}
 
@@ -2550,6 +2644,13 @@ function PersonalSpaceDrawer({
               ))}
             </select>
           </div>
+          <select value={taskDraft.scopeId || 'all'} onChange={(event) => updateDraft('scopeId', event.target.value)}>
+            {STUDENT_LENSES.map((scope) => (
+              <option key={scope.id} value={scope.id}>
+                {scope.label} / {scope.labelZh}
+              </option>
+            ))}
+          </select>
           <select value={taskDraft.locationId} onChange={(event) => updateDraftLocation(event.target.value)}>
             <option value="">Custom map point</option>
             {locations.map((location) => (
@@ -2558,30 +2659,9 @@ function PersonalSpaceDrawer({
               </option>
             ))}
           </select>
-          <div className="field-pair">
-            <label className="coordinate-field">
-              <span>Map X</span>
-              <input
-                type="number"
-                min="2"
-                max="98"
-                value={Math.round((taskDraft.mapPoint?.x || 74) * 10) / 10}
-                onChange={(event) => updateDraftPoint('x', event.target.value)}
-              />
-            </label>
-            <label className="coordinate-field">
-              <span>Map Y</span>
-              <input
-                type="number"
-                min="2"
-                max="98"
-                value={Math.round((taskDraft.mapPoint?.y || 48) * 10) / 10}
-                onChange={(event) => updateDraftPoint('y', event.target.value)}
-              />
-            </label>
-          </div>
+          <p className="drag-helper">Save it, then drag the personal marker on the map to fine-tune the position.</p>
           <textarea value={taskDraft.note} onChange={(event) => updateDraft('note', event.target.value)} placeholder="Private note" />
-          <button className="primary-button" onClick={onCreateTask} disabled={!personalId || !taskDraft.title.trim()}>
+          <button className="primary-button" onClick={onCreateTask} disabled={!taskDraft.title.trim()}>
             <Plus size={15} />
             Save to Personal Space
           </button>
@@ -2618,14 +2698,16 @@ function PersonalSpaceDrawer({
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') onSelectTask(task);
                 }}
+                style={{ '--type-color': task.type === 'personal' ? PERSONAL_TASK_COLOR : getEventType(task.type).color }}
               >
                 <span className="personal-row-icon">
-                  <ClipboardCheck size={15} />
+                  <EventTypeIcon typeId={task.type} size={15} />
                 </span>
                 <span>
                   <strong>{task.title}</strong>
                   <small>
-                    {formatPersonalTaskDue(task)} / {getPersonalTaskTypeLabel(task.type)} / {location ? getLocationLabel(location) : 'Custom point'}
+                    {formatPersonalTaskDue(task)} / {getPersonalTaskTypeLabel(task.type)} / {getScopeLabel(task.scopeId, 'en', true)} /{' '}
+                    {location ? getLocationLabel(location) : 'Custom point'}
                   </small>
                 </span>
                 <em className={`event-status ${status.tone}`}>{status.label}</em>
@@ -2688,6 +2770,10 @@ function PersonalTaskDetail({ task, location, now, onToggle, onDelete }) {
         <div>
           <span>Theme</span>
           <strong>{getPersonalTaskTypeLabel(task.type)}</strong>
+        </div>
+        <div>
+          <span>Scope</span>
+          <strong>{getScopeLabel(task.scopeId)}</strong>
         </div>
         <div>
           <span>Source</span>
@@ -3191,6 +3277,7 @@ function AdminApp({ data, updateData, resetData, onLogout }) {
       startTime: '',
       endTime: '',
       locationId,
+      studentLenses: ['all'],
       summary: '',
       audience: 'Students',
       registration: '',
@@ -3449,13 +3536,7 @@ function EventEditor({ event, locations, updateEvent, publishEvent, canEdit, can
   }
 
   const patch = (field, value) => updateEvent(event.id, { [field]: value });
-  const eventLensIds = getEventLenses(event);
-  const toggleLens = (lensId) => {
-    const next = eventLensIds.includes(lensId)
-      ? eventLensIds.filter((item) => item !== lensId)
-      : [...eventLensIds, lensId];
-    patch('studentLenses', next.length ? next : ['campus-life']);
-  };
+  const eventScopeId = getEventLenses(event)[0] || 'all';
 
   return (
     <section className="editor-card">
@@ -3498,19 +3579,16 @@ function EventEditor({ event, locations, updateEvent, publishEvent, canEdit, can
       <input disabled={!canEdit} value={event.organizer} onChange={(input) => patch('organizer', input.target.value)} placeholder="Organizer" />
       <input disabled={!canEdit} value={event.audience} onChange={(input) => patch('audience', input.target.value)} placeholder="Audience" />
       <input disabled={!canEdit} value={event.registration} onChange={(input) => patch('registration', input.target.value)} placeholder="Registration info" />
-      <div className="lens-editor" aria-label="Student lens editor">
-        {STUDENT_LENSES.filter((lens) => lens.id !== 'all').map((lens) => (
-          <label key={lens.id} className={eventLensIds.includes(lens.id) ? 'active' : ''}>
-            <input
-              type="checkbox"
-              disabled={!canEdit}
-              checked={eventLensIds.includes(lens.id)}
-              onChange={() => toggleLens(lens.id)}
-            />
-            {lens.shortLabel}
-          </label>
-        ))}
-      </div>
+      <label className="scope-editor">
+        <span>Publish scope</span>
+        <select disabled={!canEdit} value={eventScopeId} onChange={(input) => patch('studentLenses', [input.target.value])}>
+          {STUDENT_LENSES.map((scope) => (
+            <option key={scope.id} value={scope.id}>
+              {scope.label} / {scope.labelZh}
+            </option>
+          ))}
+        </select>
+      </label>
       <select
         disabled={!canEdit}
         value={event.locationId}

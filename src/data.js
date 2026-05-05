@@ -10,13 +10,60 @@ export const EVENT_TYPES = [
 ];
 
 export const STUDENT_LENSES = [
-  { id: 'all', label: 'All students', shortLabel: 'All' },
-  { id: 'ai-education', label: 'AI & Education', shortLabel: 'AI / Edu' },
-  { id: 'engineering', label: 'Engineering & IME', shortLabel: 'Engineering' },
-  { id: 'business', label: 'Business & Industry', shortLabel: 'Business' },
-  { id: 'research', label: 'Research & Academic', shortLabel: 'Research' },
-  { id: 'campus-life', label: 'Campus Life', shortLabel: 'Life' },
+  { id: 'all', label: 'School-wide', labelZh: '全校', shortLabel: 'All', shortLabelZh: '全校' },
+  {
+    id: 'ime',
+    label: 'School of Intelligent Manufacturing Ecosystem',
+    labelZh: '智造生态学院',
+    shortLabel: 'IME',
+    shortLabelZh: '智造生态',
+  },
+  {
+    id: 'ai-computing',
+    label: 'School of AI and Advanced Computing',
+    labelZh: '人工智能与先进计算学院',
+    shortLabel: 'AI / Computing',
+    shortLabelZh: 'AI先进计算',
+  },
+  {
+    id: 'fintech-industry',
+    label: 'School of Financial Technology and Industry Integration',
+    labelZh: '产金融合学院',
+    shortLabel: 'FinTech',
+    shortLabelZh: '产金融合',
+  },
+  {
+    id: 'robotics',
+    label: 'School of Robotics',
+    labelZh: '智能机器人学院',
+    shortLabel: 'Robotics',
+    shortLabelZh: '机器人',
+  },
+  {
+    id: 'iot',
+    label: 'School of Internet of Things',
+    labelZh: '物联网学院',
+    shortLabel: 'IoT',
+    shortLabelZh: '物联网',
+  },
+  {
+    id: 'cultural-technology',
+    label: 'School of Cultural Technology',
+    labelZh: '文化科技学院',
+    shortLabel: 'Culture Tech',
+    shortLabelZh: '文化科技',
+  },
+  { id: 'chips', label: 'School of CHIPS', labelZh: '芯片学院', shortLabel: 'CHIPS', shortLabelZh: '芯片' },
 ];
+
+const STUDENT_LENS_IDS = new Set(STUDENT_LENSES.map((lens) => lens.id));
+const LEGACY_LENS_MAP = {
+  'ai-education': 'ai-computing',
+  engineering: 'ime',
+  business: 'fintech-industry',
+  research: 'all',
+  'campus-life': 'all',
+};
 
 export const PRECISION_LABELS = {
   campus: 'Campus level',
@@ -166,7 +213,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-13T10:00',
     endTime: '2026-05-15T17:00',
     locationId: 'xec-central',
-    studentLenses: ['ai-education', 'research'],
+    studentLenses: ['ai-computing'],
     summary: 'Hybrid conference on AI-enabled syntegrative education, personalization, and gamification.',
     audience: 'Students and staff interested in AI education',
     registration: 'Check official event page',
@@ -183,7 +230,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-22T09:00',
     endTime: '2026-05-24T21:00',
     locationId: 'm-1018',
-    studentLenses: ['ai-education', 'research'],
+    studentLenses: ['ai-computing'],
     summary: 'Higher education innovation conference and national teaching innovation award final.',
     audience: 'Teaching staff, researchers, and students',
     registration: 'Check official event page',
@@ -200,7 +247,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-22T18:30',
     endTime: '2026-05-24T21:00',
     locationId: 'j-students-centre',
-    studentLenses: ['campus-life'],
+    studentLenses: ['all'],
     summary: 'Salon series for the XJTLU 20th anniversary, including Taicang campus sessions.',
     audience: 'Students',
     registration: 'Follow campus announcement',
@@ -217,7 +264,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-23T09:00',
     endTime: '2026-05-23T18:00',
     locationId: 'ab-2002',
-    studentLenses: ['business', 'engineering'],
+    studentLenses: ['fintech-industry'],
     summary: 'Forum on industry-education integration and industrial innovation.',
     audience: 'Students, staff, and industry partners',
     registration: 'Check official event page',
@@ -234,7 +281,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-26T09:00',
     endTime: '2026-05-31T18:00',
     locationId: 'bc-corridor-2f',
-    studentLenses: ['research', 'campus-life'],
+    studentLenses: ['all'],
     summary: 'Taicang campus phase of the XJTLU 20th anniversary research exhibition.',
     audience: 'All students and staff',
     registration: 'Walk-in',
@@ -251,7 +298,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-28T11:00',
     endTime: '2026-05-30T17:00',
     locationId: 'a-festival-area',
-    studentLenses: ['engineering', 'campus-life'],
+    studentLenses: ['ime'],
     summary: 'Coffee booths, smart device experiences, industry dialogue, SE exhibition, and social zones.',
     audience: 'Students and visitors',
     registration: 'Check campus announcement',
@@ -268,7 +315,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-29T09:00',
     endTime: '2026-05-29T18:00',
     locationId: 'c-innovation-factory',
-    studentLenses: ['engineering', 'business'],
+    studentLenses: ['ime'],
     summary: 'Forum on intelligent manufacturing and future industry opportunities.',
     audience: 'Students, staff, and industry partners',
     registration: 'Check official event page',
@@ -285,7 +332,7 @@ export const DEFAULT_EVENTS = [
     startTime: '2026-05-30T09:00',
     endTime: '2026-05-30T21:00',
     locationId: 'xec-central',
-    studentLenses: ['business', 'engineering', 'campus-life'],
+    studentLenses: ['all'],
     summary: 'Open Campus, Syntegrated City conference and campus bazar at XEC campus.',
     audience: 'Students, staff, and partners',
     registration: 'Check official event page',
@@ -309,26 +356,47 @@ export function getStudentLens(lensId) {
   return STUDENT_LENSES.find((lens) => lens.id === lensId) || STUDENT_LENSES[0];
 }
 
+export function normalizeStudentScopeId(scopeId) {
+  const normalized = String(scopeId || '').trim();
+  const migrated = LEGACY_LENS_MAP[normalized] || normalized;
+  return STUDENT_LENS_IDS.has(migrated) ? migrated : 'all';
+}
+
+export function normalizeStudentScopeIds(scopeIds) {
+  const ids = Array.isArray(scopeIds) ? scopeIds : [];
+  const normalized = [...new Set(ids.map(normalizeStudentScopeId))].filter((id) => STUDENT_LENS_IDS.has(id));
+  return normalized.length ? normalized : ['all'];
+}
+
 export function getEventLenses(event) {
-  if (Array.isArray(event.studentLenses) && event.studentLenses.length > 0) return event.studentLenses;
+  if (Array.isArray(event.studentLenses) && event.studentLenses.length > 0) return normalizeStudentScopeIds(event.studentLenses);
 
   const text = `${event.title || ''} ${event.organizer || ''} ${event.summary || ''}`.toLowerCase();
   const lenses = new Set();
 
-  if (text.includes('ai') || text.includes('education') || text.includes('teaching')) lenses.add('ai-education');
-  if (text.includes('manufacturing') || text.includes('industry') || text.includes('ime') || text.includes('innovation')) {
-    lenses.add('engineering');
+  if (text.includes('ai') || text.includes('education') || text.includes('teaching') || text.includes('advanced computing')) {
+    lenses.add('ai-computing');
   }
-  if (text.includes('business') || text.includes('partner') || text.includes('career') || text.includes('forum')) lenses.add('business');
-  if (event.type === 'academic' || text.includes('research') || text.includes('conference')) lenses.add('research');
-  if (event.type === 'student-life' || event.type === 'festival' || text.includes('salon')) lenses.add('campus-life');
-  if (lenses.size === 0) lenses.add('campus-life');
+  if (text.includes('manufacturing') || text.includes('ime') || text.includes('intelligent manufacturing')) lenses.add('ime');
+  if (text.includes('finance') || text.includes('business') || text.includes('industry-education') || text.includes('partner')) {
+    lenses.add('fintech-industry');
+  }
+  if (text.includes('robot')) lenses.add('robotics');
+  if (text.includes('iot') || text.includes('internet of things')) lenses.add('iot');
+  if (text.includes('culture') || text.includes('media') || text.includes('design') || text.includes('salon')) {
+    lenses.add('cultural-technology');
+  }
+  if (text.includes('chip') || text.includes('semiconductor')) lenses.add('chips');
+  if (event.type === 'festival' || event.type === 'student-life' || text.includes('anniversary') || text.includes('research exhibition')) {
+    lenses.add('all');
+  }
+  if (lenses.size === 0) lenses.add('all');
 
   return [...lenses];
 }
 
 export function eventFitsLens(event, lensId) {
-  return lensId === 'all' || getEventLenses(event).includes(lensId);
+  return getEventLenses(event).includes(normalizeStudentScopeId(lensId));
 }
 
 export function getLocationLabel(location) {
@@ -384,7 +452,7 @@ export function getDataHealth(data) {
       checks.push({ level: 'warning', label: `${event.title}: missing organizer` });
     }
     if (!Array.isArray(event.studentLenses) || event.studentLenses.length === 0) {
-      checks.push({ level: 'info', label: `${event.title}: student lens is not set` });
+      checks.push({ level: 'info', label: `${event.title}: school scope is not set` });
     }
     if (event.reviewStatus === 'published' && !event.sourceUrl && !event.sourceLabel) {
       checks.push({ level: 'info', label: `${event.title}: published event needs a visible source label` });
