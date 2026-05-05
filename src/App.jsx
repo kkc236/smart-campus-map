@@ -1623,7 +1623,7 @@ function StudentApp({ data }) {
             <Bot size={17} />
             <span className="top-action-label">SMART Agent</span>
           </button>
-          <a className="top-action admin-link compact" href={getAppPath('admin')} target="_blank" rel="noreferrer" title={t('admin')} aria-label={t('admin')}>
+          <a className="top-action admin-link compact" href={getAppPath('#admin')} target="_blank" rel="noreferrer" title={t('admin')} aria-label={t('admin')}>
             <ShieldCheck size={17} />
             <span className="top-action-label">Admin</span>
           </a>
