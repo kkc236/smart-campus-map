@@ -737,6 +737,11 @@ a {
   transform: none;
 }
 
+/* Student map is a fixed viewing surface; keep the zoom layer from adding a first-load offset. */
+.student-layout .map-transform-content {
+  transform: none !important;
+}
+
 .student-layout .map-transform-wrapper {
   overflow: visible !important;
 }
