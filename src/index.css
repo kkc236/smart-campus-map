@@ -737,10 +737,6 @@ a {
   transform: none;
 }
 
-.student-layout .map-transform-content {
-  transform: none !important;
-}
-
 .student-layout .map-transform-wrapper {
   overflow: visible !important;
 }
