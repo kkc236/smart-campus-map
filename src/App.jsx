@@ -75,10 +75,34 @@ const ANCHORED_PLAYER_POINT = { x: 79.57916557757815, y: 37.287159379780796 };
 const ANCHORED_PLAYER_HEADING = 0;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_FILTERS = [
-  { id: 'today', label: 'Today', labelZh: '\u4eca\u5929' },
-  { id: 'upcoming', label: 'Upcoming', labelZh: '\u5373\u5c06\u5f00\u59cb' },
-  { id: 'week', label: 'Next 7 days', labelZh: '\u672a\u67657\u5929' },
-  { id: 'all', label: 'All dates', labelZh: '\u5168\u90e8\u65e5\u671f' },
+  {
+    id: 'today',
+    label: 'Today',
+    labelZh: '\u4eca\u5929',
+    description: 'Events happening at any time today.',
+    descriptionZh: '\u4eca\u5929\u5185\u5f00\u59cb\u6216\u6b63\u5728\u8fdb\u884c\u7684\u6d3b\u52a8\u3002',
+  },
+  {
+    id: 'week',
+    label: 'Next 7 days',
+    labelZh: '\u672a\u6765 7 \u5929',
+    description: 'Events from now through the next 7 days.',
+    descriptionZh: '\u4ece\u73b0\u5728\u8d77 7 \u5929\u5185\u7684\u6d3b\u52a8\u3002',
+  },
+  {
+    id: 'month',
+    label: 'Next 30 days',
+    labelZh: '\u672a\u6765 30 \u5929',
+    description: 'Events from now through the next 30 days.',
+    descriptionZh: '\u4ece\u73b0\u5728\u8d77 30 \u5929\u5185\u7684\u6d3b\u52a8\u3002',
+  },
+  {
+    id: 'all',
+    label: 'All dates',
+    labelZh: '\u5168\u90e8\u65e5\u671f',
+    description: 'Past, current, and future events.',
+    descriptionZh: '\u8fc7\u53bb\u3001\u73b0\u5728\u548c\u672a\u6765\u7684\u5168\u90e8\u6d3b\u52a8\u3002',
+  },
 ];
 
 const ADMIN_SESSION_KEY = 'tc-campus-events-admin-session-v1';
@@ -549,7 +573,7 @@ function getPersonalTaskStatus(task, now) {
   if (!due || Number.isNaN(due)) return { label: 'Open', tone: 'soon' };
   if (due < now) return { label: 'Overdue', tone: 'live' };
   if (due - now < DAY_MS) return { label: 'Today', tone: 'soon' };
-  return { label: 'Upcoming', tone: 'upcoming' };
+  return { label: 'Scheduled', tone: 'upcoming' };
 }
 
 function getPersonalTaskTypeLabel(typeId) {
@@ -643,11 +667,12 @@ function eventFitsTime(event, timeFilter, now) {
     return eventOverlaps(event, today.end, today.end + DAY_MS);
   }
   if (timeFilter === 'week') return eventOverlaps(event, now, now + 7 * DAY_MS);
+  if (timeFilter === 'month') return eventOverlaps(event, now, now + 30 * DAY_MS);
   return true;
 }
 
 function getPrimaryTimeFilter(events, now) {
-  return ['today', 'upcoming', 'week'].find((filterId) => events.some((event) => eventFitsTime(event, filterId, now))) || 'all';
+  return ['today', 'week', 'month'].find((filterId) => events.some((event) => eventFitsTime(event, filterId, now))) || 'all';
 }
 
 function getTimeFilterLabel(filterId, language) {
@@ -655,8 +680,16 @@ function getTimeFilterLabel(filterId, language) {
   return language === 'zh' ? filter.labelZh : filter.label;
 }
 
+function getTimeFilterDescription(filterId, language) {
+  const filter = TIME_FILTERS.find((item) => item.id === filterId) || TIME_FILTERS[TIME_FILTERS.length - 1];
+  return language === 'zh' ? filter.descriptionZh : filter.description;
+}
+
 function getTimeActionLabel(filterId, language) {
   if (filterId === 'today') return language === 'zh' ? '\u67e5\u770b\u4eca\u5929' : 'Show today';
+  if (filterId === 'week') return language === 'zh' ? '\u67e5\u770b\u672a\u6765 7 \u5929' : 'Show next 7 days';
+  if (filterId === 'month') return language === 'zh' ? '\u67e5\u770b\u672a\u6765 30 \u5929' : 'Show next 30 days';
+  if (filterId === 'all') return language === 'zh' ? '\u67e5\u770b\u5168\u90e8\u65e5\u671f' : 'Show all dates';
   return language === 'zh' ? '\u6253\u5f00' + getTimeFilterLabel(filterId, language) : 'Show ' + getTimeFilterLabel(filterId, language);
 }
 
@@ -1838,17 +1871,23 @@ function StudentApp({ data }) {
 
       <section className="student-filter-stack">
         <div className="time-strip" aria-label="Time filters">
-          {TIME_FILTERS.map((filter) => (
-            <button
-              key={filter.id}
-              className={timeFilter === filter.id ? 'active' : ''}
-              onClick={() => setTimeFilter(filter.id)}
-            >
-              <Clock size={14} />
-              <span>{language === 'zh' ? filter.labelZh : filter.label}</span>
-              <b>{timeCounts.get(filter.id) || 0}</b>
-            </button>
-          ))}
+          {TIME_FILTERS.map((filter) => {
+            const label = getTimeFilterLabel(filter.id, language);
+            const description = getTimeFilterDescription(filter.id, language);
+            return (
+              <button
+                key={filter.id}
+                className={timeFilter === filter.id ? 'active' : ''}
+                onClick={() => setTimeFilter(filter.id)}
+                title={description}
+                aria-label={`${label}: ${description}`}
+              >
+                <Clock size={14} />
+                <span>{label}</span>
+                <b>{timeCounts.get(filter.id) || 0}</b>
+              </button>
+            );
+          })}
         </div>
         <div className="student-tools">
           <div className="smart-search">

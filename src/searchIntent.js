@@ -9,7 +9,7 @@ const LEGACY_LENS_MAP = {
   schoolwide: 'campus',
   'school-wide': 'campus',
 };
-const TIME_FILTER_IDS = ['all', 'today', 'upcoming', 'week', 'now', 'laterToday', 'tomorrow'];
+const TIME_FILTER_IDS = ['all', 'today', 'upcoming', 'week', 'month', 'now', 'laterToday', 'tomorrow'];
 
 export const SEARCH_INTENT_SCHEMA = {
   type: 'object',
@@ -72,6 +72,7 @@ const TIME_ALIASES = [
   { id: 'today', terms: ['today', 'now', 'right now', 'current', 'currently', '今天', '正在', '现在'] },
   { id: 'upcoming', terms: ['upcoming', 'next', 'later', 'future', '即将', '稍后', '接下来'] },
   { id: 'week', terms: ['this week', 'next 7 days', 'week', '未来7天', '本周'] },
+  { id: 'month', terms: ['next 30 days', '30 days', 'month', 'this month'] },
 ];
 
 const BUILDING_ALIASES = [
@@ -328,11 +329,12 @@ export function summarizeSearchIntent(intent, language = 'en') {
   const parts = [];
   const timeLabels = {
     today: language === 'zh' ? '今天' : 'today',
-    upcoming: language === 'zh' ? '即将开始' : 'upcoming',
+    upcoming: language === 'zh' ? '\u672a\u7ed3\u675f' : 'not ended',
     now: language === 'zh' ? '正在进行' : 'now',
     laterToday: language === 'zh' ? '今天稍晚' : 'later today',
     tomorrow: language === 'zh' ? '明天' : 'tomorrow',
     week: language === 'zh' ? '未来7天' : 'next 7 days',
+    month: language === 'zh' ? '\u672a\u676530\u5929' : 'next 30 days',
   };
   if (intent.timeFilter && intent.timeFilter !== 'all') parts.push(timeLabels[intent.timeFilter]);
   if (intent.buildingIds?.length) parts.push(intent.buildingIds.join('/'));
