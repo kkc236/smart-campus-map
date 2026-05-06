@@ -879,6 +879,28 @@ a {
   padding: 5px;
 }
 
+.cluster-marker {
+  z-index: 3;
+}
+
+.cluster-marker .cluster-pin {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: rgba(49, 93, 255, 0.72);
+  box-shadow:
+    0 0 0 8px rgba(49, 93, 255, 0.12),
+    0 10px 22px rgba(23, 32, 35, 0.16);
+}
+
+.cluster-marker:hover .cluster-pin,
+.cluster-marker.selected .cluster-pin {
+  background: var(--blue);
+  box-shadow:
+    0 0 0 9px rgba(49, 93, 255, 0.16),
+    0 12px 24px rgba(23, 32, 35, 0.18);
+}
+
 .mini-type-icon {
   display: grid;
   min-width: 0;
@@ -1505,6 +1527,72 @@ a {
 .info-grid strong {
   font-size: 14px;
   line-height: 1.45;
+}
+
+.cluster-detail {
+  gap: 14px;
+}
+
+.cluster-place-card {
+  border-color: rgba(49, 93, 255, 0.18);
+  background: #f7f9ff;
+}
+
+.cluster-place-list {
+  display: grid;
+  gap: 12px;
+}
+
+.cluster-place-group {
+  display: grid;
+  gap: 8px;
+}
+
+.cluster-place-heading {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 10px;
+  text-align: left;
+}
+
+.cluster-place-heading span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.cluster-place-heading strong,
+.cluster-place-heading small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cluster-place-heading small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.cluster-place-heading em {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e8efff;
+  color: #234ac9;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
 }
 
 .primary-link {

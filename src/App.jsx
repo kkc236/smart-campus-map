@@ -74,6 +74,7 @@ function uid(prefix) {
 const ANCHORED_PLAYER_POINT = { x: 79.57916557757815, y: 37.287159379780796 };
 const ANCHORED_PLAYER_HEADING = 0;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MAP_CLUSTER_DISTANCE = 7.4;
 const TIME_FILTERS = [
   {
     id: 'today',
@@ -693,6 +694,13 @@ function getTimeActionLabel(filterId, language) {
   return language === 'zh' ? '\u6253\u5f00' + getTimeFilterLabel(filterId, language) : 'Show ' + getTimeFilterLabel(filterId, language);
 }
 
+function getRecommendationTitle(filterId, language) {
+  if (filterId === 'today') return language === 'zh' ? '\u4eca\u5929\u63a8\u8350' : 'Recommended today';
+  if (filterId === 'week') return language === 'zh' ? '\u672a\u6765 7 \u5929\u63a8\u8350' : 'Recommended next 7 days';
+  if (filterId === 'month') return language === 'zh' ? '\u672a\u6765 30 \u5929\u63a8\u8350' : 'Recommended next 30 days';
+  return language === 'zh' ? '\u5168\u90e8\u65e5\u671f\u63a8\u8350' : 'Recommended all dates';
+}
+
 function getEventStatus(event, now, language = 'en') {
   const eventWindow = getEventWindow(event);
   if (eventWindow.start == null || Number.isNaN(eventWindow.start)) return { label: language === 'zh' ? '\u65f6\u95f4\u672a\u5b9a' : 'Time not set', tone: 'muted' };
@@ -727,6 +735,45 @@ function formatUpdatedAt(value, now, language = 'en') {
 function getMapDistance(from, to) {
   if (!from || !to) return null;
   return Math.hypot(from.x - to.x, from.y - to.y);
+}
+
+function getStackClusterId(stacks) {
+  return `cluster-${stacks.map((stack) => stack.location.id).sort().join('-')}`;
+}
+
+function createSingleStackCluster(stack) {
+  return {
+    id: getStackClusterId([stack]),
+    point: stack.location.mapPoint,
+    stacks: [stack],
+    events: stack.events,
+  };
+}
+
+function buildMapClusters(stacks, threshold = MAP_CLUSTER_DISTANCE) {
+  const clusters = [];
+  stacks.forEach((stack) => {
+    const point = stack.location.mapPoint;
+    const nearbyCluster = clusters.find((cluster) => getMapDistance(cluster.point, point) <= threshold);
+    if (!nearbyCluster) {
+      clusters.push(createSingleStackCluster(stack));
+      return;
+    }
+
+    nearbyCluster.stacks.push(stack);
+    nearbyCluster.events.push(...stack.events);
+    const count = nearbyCluster.stacks.length;
+    nearbyCluster.point = {
+      x: nearbyCluster.stacks.reduce((sum, item) => sum + item.location.mapPoint.x, 0) / count,
+      y: nearbyCluster.stacks.reduce((sum, item) => sum + item.location.mapPoint.y, 0) / count,
+    };
+    nearbyCluster.id = getStackClusterId(nearbyCluster.stacks);
+  });
+
+  return clusters.map((cluster) => ({
+    ...cluster,
+    events: [...cluster.events].sort((first, second) => new Date(first.startTime || 0) - new Date(second.startTime || 0)),
+  }));
 }
 
 function getRouteSummary(from, location, language = 'en') {
@@ -855,14 +902,17 @@ function TrustBadges({ event, location }) {
 
 function CampusMap({
   stacks,
+  clusters = null,
   locations = [],
   personalTasks = [],
   personalMode = false,
   personalMeta = normalizePersonalMeta(),
   selectedLocationId,
   selectedEventId,
+  selectedClusterId,
   selectedPersonalTaskId,
   onSelectLocation,
+  onSelectCluster,
   onSelectPersonalTask,
   admin = false,
   editMode = false,
@@ -900,6 +950,10 @@ function CampusMap({
   const calibration = useMemo(() => createCalibration(readyAnchors), [readyAnchors]);
   const screenNorthBearing = useMemo(() => getScreenNorthBearing(calibration), [calibration]);
   const personalTaskStacks = useMemo(() => buildPersonalTaskStacks(personalTasks, locations), [locations, personalTasks]);
+  const mapClusters = useMemo(
+    () => (admin ? stacks.map(createSingleStackCluster) : clusters || buildMapClusters(stacks)),
+    [admin, clusters, stacks],
+  );
   const liveMapPoint = useMemo(
     () => projectLocationToMap(currentLocation, readyAnchors, calibration),
     [calibration, currentLocation, readyAnchors],
@@ -1273,43 +1327,60 @@ function CampusMap({
                       <span className="player-dot" />
                     </div>
                   )}
-                  {stacks.map((stack) => {
+                  {mapClusters.map((cluster) => {
+                    const isCluster = !admin && cluster.stacks.length > 1;
+                    const stack = cluster.stacks[0];
                     const location = stack.location;
-                    const primaryEvent = stack.events[0];
-                    const type = getEventType(primaryEvent?.type || 'academic');
-                    const typeIds = [...new Set(stack.events.map((event) => event.type))];
+                    const clusterEvents = isCluster ? cluster.events : stack.events;
+                    const primaryEvent = clusterEvents[0];
+                    const type = isCluster ? { color: '#315dff' } : getEventType(primaryEvent?.type || 'academic');
+                    const typeIds = [...new Set(clusterEvents.map((event) => event.type))];
                     const mixedTypes = typeIds.length > 1;
                     const personalStates = personalMode
-                      ? stack.events.map((event) => getPersonalEventState(event, personalMeta))
+                      ? clusterEvents.map((event) => getPersonalEventState(event, personalMeta))
                       : [];
                     const hasPersonalReminder = personalStates.some((state) => state.reminded);
                     const hasPersonalCheckin = personalStates.some((state) => state.checked);
                     const selected =
-                      selectedLocationId === location.id || stack.events.some((event) => event.id === selectedEventId);
+                      selectedClusterId === cluster.id ||
+                      cluster.stacks.some((item) => item.location.id === selectedLocationId) ||
+                      clusterEvents.some((event) => event.id === selectedEventId);
                     return (
                       <button
-                        key={location.id}
-                        className={`map-marker ${admin ? 'with-label' : 'icon-only'} ${selected ? 'selected' : ''} ${
-                          stack.events.length > 1 ? 'stacked' : ''
+                        key={cluster.id}
+                        className={`map-marker ${admin ? 'with-label' : 'icon-only'} ${isCluster ? 'cluster-marker' : ''} ${
+                          selected ? 'selected' : ''
+                        } ${
+                          clusterEvents.length > 1 ? 'stacked' : ''
                         } ${personalMode ? 'personal-mode-marker' : ''} ${hasPersonalReminder ? 'personal-reminded' : ''} ${
                           hasPersonalCheckin ? 'personal-checked' : ''
                         } ${draggingId === location.id ? 'dragging' : ''}`}
                         style={{
-                          left: `${location.mapPoint.x}%`,
-                          top: `${location.mapPoint.y}%`,
+                          left: `${isCluster ? cluster.point.x : location.mapPoint.x}%`,
+                          top: `${isCluster ? cluster.point.y : location.mapPoint.y}%`,
                           '--type-color': type.color,
                         }}
                         onPointerDown={(event) => startDrag(event, location)}
                         onClick={(event) => {
                           event.stopPropagation();
+                          if (isCluster) {
+                            onSelectCluster?.(cluster);
+                            return;
+                          }
                           onSelectLocation(location.id);
                         }}
-                        title={`${getLocationLabel(location)}${
-                          hasPersonalCheckin ? ' / checked in' : hasPersonalReminder ? ' / personal reminder on' : ''
-                        }`}
+                        title={
+                          isCluster
+                            ? `${clusterEvents.length} events across ${cluster.stacks.length} nearby places`
+                            : `${getLocationLabel(location)}${
+                                hasPersonalCheckin ? ' / checked in' : hasPersonalReminder ? ' / personal reminder on' : ''
+                              }`
+                        }
                       >
-                        <span className={`marker-pin ${mixedTypes ? 'mixed' : ''}`}>
-                          {mixedTypes ? (
+                        <span className={`marker-pin ${isCluster ? 'cluster-pin' : ''} ${mixedTypes && !isCluster ? 'mixed' : ''}`}>
+                          {isCluster ? (
+                            <MapPin size={18} />
+                          ) : mixedTypes ? (
                             typeIds.slice(0, 3).map((typeId) => (
                               <span key={typeId} className="mini-type-icon">
                                 <EventTypeIcon typeId={typeId} size={12} />
@@ -1318,7 +1389,7 @@ function CampusMap({
                           ) : (
                             <EventTypeIcon typeId={primaryEvent?.type || 'academic'} size={18} />
                           )}
-                          {stack.events.length > 1 && <b>{stack.events.length}</b>}
+                          {clusterEvents.length > 1 && <b>{clusterEvents.length}</b>}
                         </span>
                         {admin && <span className="marker-label">{getLocationLabel(location)}</span>}
                       </button>
@@ -1451,6 +1522,7 @@ function StudentApp({ data }) {
   const [timeFilter, setTimeFilter] = useState('all');
   const [selectedLocationId, setSelectedLocationId] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedClusterId, setSelectedClusterId] = useState(null);
   const [locationSnapshot, setLocationSnapshot] = useState(null);
   const [language, setLanguage] = useState('en');
   const [sheetMode, setSheetMode] = useState('peek');
@@ -1486,10 +1558,13 @@ function StudentApp({ data }) {
     [studentEvents, data.locations, query, typeFilter, lensFilter, now, timeFilter, effectiveSearchIntent],
   );
   const stacks = useMemo(() => buildLocationStacks(visibleEvents, data.locations), [data.locations, visibleEvents]);
+  const mapClusters = useMemo(() => buildMapClusters(stacks), [stacks]);
   const allStudentStacks = useMemo(() => buildLocationStacks(studentEvents, data.locations), [data.locations, studentEvents]);
   const locationsById = useMemo(() => new Map(data.locations.map((location) => [location.id, location])), [data.locations]);
   const selectedLocation = locationsById.get(selectedLocationId) || stacks[0]?.location || null;
   const selectedStack = stacks.find((stack) => stack.location.id === selectedLocation?.id) || null;
+  const selectedCluster =
+    selectedClusterId && mapClusters.find((cluster) => cluster.id === selectedClusterId && cluster.stacks.length > 1);
   const selectedEvent = visibleEvents.find((event) => event.id === selectedEventId) || null;
   const publishedEvents = studentEvents;
   const selectedPersonalTask = personalTasks.find((task) => task.id === selectedPersonalTaskId) || null;
@@ -1641,6 +1716,7 @@ function StudentApp({ data }) {
         updatedAt: new Date().toISOString(),
       });
       updatePersonalTasks((current) => [task, ...current]);
+      setSelectedClusterId(null);
       setSelectedPersonalTaskId(task.id);
       if (task.locationId) setSelectedLocationId(task.locationId);
       setSelectedEventId(null);
@@ -1791,6 +1867,7 @@ function StudentApp({ data }) {
   const nextOpenPersonalTask = filteredPersonalTasks[0] || openPersonalTasks[0] || null;
 
   const openPersonalTaskList = () => {
+    setSelectedClusterId(null);
     setPersonalMode(true);
     setPersonalSpaceOpen(true);
     setSelectedEventId(null);
@@ -1810,6 +1887,7 @@ function StudentApp({ data }) {
 
   const openPersonalizedPublicEvent = (events, emptyNotice) => {
     const event = events[0];
+    setSelectedClusterId(null);
     setPersonalMode(true);
     setSelectedPersonalTaskId(null);
     if (event) {
@@ -2023,6 +2101,7 @@ function StudentApp({ data }) {
         language={language}
         t={t}
         onSelectEvent={(event) => {
+          setSelectedClusterId(null);
           setSelectedEventId(event.id);
           setSelectedLocationId(event.locationId);
           setSelectedPersonalTaskId(null);
@@ -2030,6 +2109,7 @@ function StudentApp({ data }) {
           setDetailPanelOpen(true);
         }}
         onSelectLocation={(locationId) => {
+          setSelectedClusterId(null);
           setSelectedLocationId(locationId);
           setSelectedEventId(null);
           setSelectedPersonalTaskId(null);
@@ -2052,17 +2132,28 @@ function StudentApp({ data }) {
           </button>
           <CampusMap
             stacks={stacks}
+            clusters={mapClusters}
             locations={data.locations}
             personalTasks={visiblePersonalTasks}
             personalMode={personalMode}
             personalMeta={personalMeta}
             selectedLocationId={selectedLocation?.id}
             selectedEventId={selectedEventId}
+            selectedClusterId={selectedClusterId}
             selectedPersonalTaskId={selectedPersonalTaskId}
             onLocationSnapshot={handleLocationSnapshot}
             language={language}
             t={t}
+            onSelectCluster={(cluster) => {
+              setSelectedClusterId(cluster.id);
+              setSelectedLocationId(cluster.stacks[0]?.location.id || null);
+              setSelectedEventId(null);
+              setSelectedPersonalTaskId(null);
+              setSheetMode('half');
+              setDetailPanelOpen(true);
+            }}
             onSelectLocation={(locationId) => {
+              setSelectedClusterId(null);
               setSelectedLocationId(locationId);
               setSelectedEventId(null);
               setSelectedPersonalTaskId(null);
@@ -2070,6 +2161,7 @@ function StudentApp({ data }) {
               setDetailPanelOpen(true);
             }}
             onSelectPersonalTask={(taskId, locationId) => {
+              setSelectedClusterId(null);
               setPersonalMode(true);
               setSelectedPersonalTaskId(taskId);
               setSelectedEventId(null);
@@ -2121,6 +2213,31 @@ function StudentApp({ data }) {
               onToggleEventCheckin={toggleEventCheckin}
               onUpdateEventFeedback={updateEventFeedback}
               onBack={() => setSelectedEventId(null)}
+            />
+          ) : selectedCluster ? (
+            <ClusterStackDetail
+              cluster={selectedCluster}
+              locationSnapshot={locationSnapshot}
+              updatedLabel={updatedLabel}
+              now={now}
+              language={language}
+              personalMode={personalMode}
+              personalMeta={personalMeta}
+              onSelectEvent={(eventId, locationId) => {
+                setSelectedClusterId(null);
+                setSelectedEventId(eventId);
+                if (locationId) setSelectedLocationId(locationId);
+                setDetailPanelOpen(true);
+              }}
+              onSelectLocation={(locationId) => {
+                setSelectedClusterId(null);
+                setSelectedLocationId(locationId);
+                setSelectedEventId(null);
+                setDetailPanelOpen(true);
+              }}
+              onToggleEventReminder={toggleEventReminder}
+              onToggleEventCheckin={toggleEventCheckin}
+              onUpdateEventFeedback={updateEventFeedback}
             />
           ) : selectedStack || selectedLocationPersonalTasks.length > 0 ? (
             <LocationStackDetail
@@ -2262,6 +2379,7 @@ function RecommendationRail({
     .sort((first, second) => first.distance - second.distance)[0];
   const lensEvent = futureEvents.find((event) => eventFitsLens(event, lensFilter)) || futureEvents[0];
   const primaryTimeFilter = getPrimaryTimeFilter(events, now);
+  const recommendationTitle = getRecommendationTitle(primaryTimeFilter, language);
 
   const cards = [
     {
@@ -2297,7 +2415,7 @@ function RecommendationRail({
   return (
     <section className="recommendation-rail" aria-label="Recommended events">
       <div className="recommendation-head">
-        <span className="eyebrow">{t('recommended')}</span>
+        <span className="eyebrow">{recommendationTitle}</span>
         <button onClick={() => onTimeFilter(primaryTimeFilter)} disabled={events.length === 0}>
           <Clock size={15} />
           {getTimeActionLabel(primaryTimeFilter, language)}
@@ -2729,6 +2847,8 @@ function PersonalSpaceDrawer({
   onToggleTask,
   onDeleteTask,
 }) {
+  if (!open) return null;
+
   const openTasks = tasks.filter((task) => !task.completed);
   const completedTasks = tasks.filter((task) => task.completed);
   const updateDraft = (field, value) => setTaskDraft((current) => ({ ...current, [field]: value }));
@@ -3224,6 +3344,120 @@ function LocationStackDetail({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function ClusterStackDetail({
+  cluster,
+  locationSnapshot,
+  updatedLabel,
+  now,
+  language = 'en',
+  personalMode = false,
+  personalMeta = normalizePersonalMeta(),
+  onSelectEvent,
+  onSelectLocation,
+  onToggleEventReminder,
+  onToggleEventCheckin,
+  onUpdateEventFeedback,
+}) {
+  const clusterLocation = {
+    mapPoint: cluster.point,
+  };
+  const routeSummary = getRouteSummary(locationSnapshot?.point, clusterLocation, language);
+  const placeCount = cluster.stacks.length;
+  const eventCount = cluster.events.length;
+
+  return (
+    <div className="panel-flow cluster-detail">
+      <div className="place-card cluster-place-card">
+        <span className="eyebrow">{language === 'zh' ? '\u805a\u5408\u70b9' : 'Cluster'}</span>
+        <h2>{language === 'zh' ? '\u9644\u8fd1\u6d3b\u52a8\u70b9' : 'Nearby event places'}</h2>
+        <p>
+          {language === 'zh'
+            ? `${placeCount} \u4e2a\u9644\u8fd1\u5730\u70b9\u88ab\u5408\u5e76\u663e\u793a\uff0c\u907f\u514d\u5730\u56fe\u4e2d\u592e\u6807\u8bb0\u91cd\u53e0\u3002`
+            : `${placeCount} nearby places are grouped here to keep the center of the map readable.`}
+        </p>
+        <div className="location-meta">
+          <span>
+            <Navigation size={14} />
+            {routeSummary}
+          </span>
+          <span>
+            <CalendarDays size={14} />
+            {language === 'zh'
+              ? `${eventCount} \u4e2a\u6d3b\u52a8`
+              : `${eventCount} event${eventCount === 1 ? '' : 's'}`}
+          </span>
+          <span>
+            <LocateFixed size={14} />
+            {updatedLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className="section-heading">
+        <MapPin size={17} />
+        <strong>
+          {language === 'zh'
+            ? `${placeCount} \u4e2a\u5730\u70b9\u7684\u6d3b\u52a8`
+            : `Events across ${placeCount} nearby places`}
+        </strong>
+      </div>
+
+      <div className="cluster-place-list">
+        {cluster.stacks.map((stack) => (
+          <div key={stack.location.id} className="cluster-place-group">
+            <button type="button" className="cluster-place-heading" onClick={() => onSelectLocation?.(stack.location.id)}>
+              <span>
+                <strong>{getLocationLabel(stack.location)}</strong>
+                <small>{getRouteSummary(locationSnapshot?.point, stack.location, language)}</small>
+              </span>
+              <em>{stack.events.length}</em>
+            </button>
+            <div className="event-list">
+              {stack.events.map((event) => {
+                const personalState = getPersonalEventState(event, personalMeta);
+                return (
+                  <div
+                    key={event.id}
+                    className={`event-row ${personalState.reminded ? 'personal-reminded' : ''} ${
+                      personalState.checked ? 'personal-checked' : ''
+                    }`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onSelectEvent?.(event.id, event.locationId)}
+                    onKeyDown={(interaction) => {
+                      if (interaction.key === 'Enter' || interaction.key === ' ') onSelectEvent?.(event.id, event.locationId);
+                    }}
+                  >
+                    <span>
+                      <strong>{event.title}</strong>
+                      <small>{formatEventTime(event)} / {event.organizer || 'Organizer not set'}</small>
+                    </span>
+                    <span className="event-row-side">
+                      <em className={`event-status ${getEventStatus(event, now, language).tone}`}>
+                        {getEventStatus(event, now, language).label}
+                      </em>
+                      <TypePill typeId={event.type} />
+                      <PersonalEventControls
+                        event={event}
+                        personalMode={personalMode}
+                        personalMeta={personalMeta}
+                        compact
+                        onToggleEventReminder={onToggleEventReminder}
+                        onToggleEventCheckin={onToggleEventCheckin}
+                        onUpdateEventFeedback={onUpdateEventFeedback}
+                      />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
