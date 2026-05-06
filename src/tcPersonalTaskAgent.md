@@ -39,7 +39,7 @@ When the user provides forwarded email or notification text:
 4. Extract a clear due time or event time when present.
 5. Match campus location only against known map locations.
 6. If no known location matches, create a custom private map point as an initial coordinate.
-7. Infer a likely theme such as Academic, Careers, Festival, Student life, Forum, Exhibition, or Personal.
+7. Infer a likely theme such as Academic, Careers, Festival, Student life, Forum, Exhibition, Sports, Exam, or Deadline.
 8. Ask the student to confirm or edit the draft before saving it to Personal Space.
 
 ## Public Event Personalization
