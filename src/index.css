@@ -786,7 +786,15 @@ a {
 .map-marker.icon-only .marker-pin {
   width: 38px;
   height: 38px;
-  box-shadow: 0 10px 22px rgba(23, 32, 35, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  background: color-mix(in srgb, var(--type-color) 68%, transparent);
+  box-shadow: 0 8px 18px rgba(23, 32, 35, 0.13);
+  opacity: 0.78;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
 }
 
 .map-marker.icon-only:hover,
@@ -797,6 +805,10 @@ a {
 
 .map-marker.icon-only:hover .marker-pin,
 .map-marker.icon-only.selected .marker-pin {
+  border-color: #ffffff;
+  background: var(--type-color);
+  box-shadow: 0 10px 22px rgba(23, 32, 35, 0.18);
+  opacity: 1;
   outline: 4px solid color-mix(in srgb, var(--type-color) 22%, transparent);
 }
 
@@ -812,8 +824,13 @@ a {
 }
 
 .map-marker.personal-checked .marker-pin {
-  background: #17a079;
+  background: color-mix(in srgb, #17a079 72%, transparent);
   outline: 4px solid rgba(23, 160, 121, 0.28);
+}
+
+.map-marker.personal-checked:hover .marker-pin,
+.map-marker.personal-checked.selected .marker-pin {
+  background: #17a079;
 }
 
 .map-marker.personal-checked .marker-pin::after {
@@ -879,10 +896,15 @@ a {
   place-items: center;
   border: 2px solid #ffffff;
   border-radius: 999px;
-  background: var(--ink);
+  background: rgba(23, 32, 35, 0.8);
   color: #ffffff;
   font-size: 11px;
   line-height: 1;
+}
+
+.map-marker.icon-only:hover .marker-pin b,
+.map-marker.icon-only.selected .marker-pin b {
+  background: var(--ink);
 }
 
 .player-location {
@@ -925,8 +947,8 @@ a {
   height: 150px;
   border-radius: 999px;
   background:
-    conic-gradient(from 330deg, rgba(49, 93, 255, 0.46) 0deg, rgba(49, 93, 255, 0.18) 42deg, transparent 70deg),
-    radial-gradient(circle at center, rgba(49, 93, 255, 0.16), transparent 34%);
+    conic-gradient(from 330deg, rgba(49, 93, 255, 0.28) 0deg, rgba(49, 93, 255, 0.1) 42deg, transparent 70deg),
+    radial-gradient(circle at center, rgba(49, 93, 255, 0.1), transparent 34%);
   mask: radial-gradient(circle at center, transparent 18px, black 21px);
   transform-origin: center center;
 }
@@ -937,6 +959,7 @@ a {
   background: linear-gradient(180deg, #7ab8ff, #315dff);
   clip-path: polygon(50% 0, 94% 78%, 50% 58%, 6% 78%);
   filter: drop-shadow(0 8px 12px rgba(18, 43, 130, 0.34));
+  opacity: 0.86;
   transform-origin: center center;
 }
 
@@ -946,6 +969,7 @@ a {
   border: 4px solid rgba(255, 255, 255, 0.98);
   border-radius: 999px;
   background: #315dff;
+  opacity: 0.92;
   box-shadow:
     0 0 0 8px rgba(49, 93, 255, 0.14),
     0 10px 20px rgba(18, 43, 130, 0.26);
@@ -1708,11 +1732,17 @@ a {
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 3px solid #ffffff;
+  border: 3px solid rgba(255, 255, 255, 0.72);
   border-radius: 8px 8px 8px 2px;
-  background: var(--personal-color, #6d2fd4);
-  box-shadow: 0 12px 24px rgba(52, 22, 105, 0.34);
+  background: color-mix(in srgb, var(--personal-color, #6d2fd4) 68%, transparent);
+  box-shadow: 0 10px 20px rgba(52, 22, 105, 0.22);
+  opacity: 0.8;
   transform: rotate(-45deg);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
 }
 
 .personal-task-pin.mixed {
@@ -1744,6 +1774,10 @@ a {
 
 .personal-task-marker:hover .personal-task-pin,
 .personal-task-marker.selected .personal-task-pin {
+  border-color: #ffffff;
+  background: var(--personal-color, #6d2fd4);
+  box-shadow: 0 12px 24px rgba(52, 22, 105, 0.34);
+  opacity: 1;
   outline: 4px solid color-mix(in srgb, var(--personal-color, #6d2fd4) 22%, transparent);
 }
 
