@@ -273,11 +273,19 @@ function mergeCampusDataWithDefaults(data) {
   const defaultEventsById = new Map(defaults.events.map((event) => [event.id, event]));
   const existingLocationIds = new Set(normalized.locations.map((location) => location.id));
   const existingEventIds = new Set(normalized.events.map((event) => event.id));
-  const locationPatches = new Set(['bc-corridor-2f']);
+  const locationPatches = new Set(defaults.locations.map((location) => location.id));
   const locations = normalized.locations.map((location) => {
     const defaultLocation = defaultLocationsById.get(location.id);
     if (!defaultLocation || !locationPatches.has(location.id)) return location;
-    return { ...location, mapPoint: defaultLocation.mapPoint, verified: defaultLocation.verified };
+    return {
+      ...location,
+      buildingName: defaultLocation.buildingName,
+      area: defaultLocation.area,
+      entranceHint: defaultLocation.entranceHint,
+      precision: defaultLocation.precision,
+      mapPoint: defaultLocation.mapPoint,
+      verified: defaultLocation.verified,
+    };
   });
   defaults.locations.forEach((location) => {
     if (!existingLocationIds.has(location.id)) locations.push(location);

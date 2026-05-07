@@ -114,6 +114,31 @@ export const TC_LOCATION_ANCHORS = [
   { id: 'anchor-32', x: 96.07629427792915, y: 45.66067240031275, lat: 31.484224393896035, lng: 121.15816063053428 },
 ];
 
+// White-ring coordinates: A-G are fixed on the center line of the white circular corridor.
+// Connector coordinates such as AB or BC must be calculated from these ring points, not placed inside buildings.
+const WHITE_RING_POINTS = {
+  A: { x: 77.6, y: 68.3 },
+  B: { x: 85.8, y: 55.4 },
+  C: { x: 82.4, y: 41.7 },
+  D: { x: 71.5, y: 32.0 },
+  E: { x: 61.9, y: 41.5 },
+  F: { x: 59.1, y: 58.2 },
+  G: { x: 66.2, y: 71.0 },
+};
+
+function ringPoint(pointId) {
+  return { ...WHITE_RING_POINTS[pointId] };
+}
+
+function ringMidpoint(firstPointId, secondPointId) {
+  const first = WHITE_RING_POINTS[firstPointId];
+  const second = WHITE_RING_POINTS[secondPointId];
+  return {
+    x: Number(((first.x + second.x) / 2).toFixed(1)),
+    y: Number(((first.y + second.y) / 2).toFixed(1)),
+  };
+}
+
 export const DEFAULT_LOCATIONS = [
   {
     id: 'xec-central',
@@ -125,7 +150,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Central activity area',
     entranceHint: 'Use the main loop road and follow event signage.',
     precision: 'campus',
-    mapPoint: { x: 74.2, y: 48.2 },
+    mapPoint: ringMidpoint('C', 'D'),
     verified: true,
   },
   {
@@ -138,7 +163,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Conference room',
     entranceHint: 'Enter M Building from the south side and follow room signs to M-1018.',
     precision: 'room',
-    mapPoint: { x: 60.6, y: 13.8 },
+    mapPoint: ringMidpoint('D', 'E'),
     verified: true,
   },
   {
@@ -151,8 +176,99 @@ export const DEFAULT_LOCATIONS = [
     area: 'Students Centre area',
     entranceHint: 'Cross the inner bridge toward J Building and look for student activity signage.',
     precision: 'building',
-    mapPoint: { x: 65.7, y: 60.7 },
+    mapPoint: ringMidpoint('F', 'G'),
     verified: false,
+  },
+  {
+    id: 'ring-a',
+    campus: 'TC',
+    buildingId: 'A',
+    buildingName: 'A White Ring Point',
+    floor: '',
+    room: '',
+    area: 'White ring point for A',
+    entranceHint: 'Use the white inner ring corridor at A.',
+    precision: 'connector',
+    mapPoint: ringPoint('A'),
+    verified: true,
+  },
+  {
+    id: 'ring-b',
+    campus: 'TC',
+    buildingId: 'B',
+    buildingName: 'B White Ring Point',
+    floor: '',
+    room: '',
+    area: 'White ring point for B',
+    entranceHint: 'Use the white inner ring corridor at B.',
+    precision: 'connector',
+    mapPoint: ringPoint('B'),
+    verified: true,
+  },
+  {
+    id: 'ring-c',
+    campus: 'TC',
+    buildingId: 'C',
+    buildingName: 'C White Ring Point',
+    floor: '',
+    room: '',
+    area: 'White ring point for C',
+    entranceHint: 'Use the white inner ring corridor at C.',
+    precision: 'connector',
+    mapPoint: ringPoint('C'),
+    verified: true,
+  },
+  {
+    id: 'ring-d',
+    campus: 'TC',
+    buildingId: 'D',
+    buildingName: 'D White Ring Point',
+    floor: '',
+    room: '',
+    area: 'White ring point for D',
+    entranceHint: 'Use the white inner ring corridor at D.',
+    precision: 'connector',
+    mapPoint: ringPoint('D'),
+    verified: true,
+  },
+  {
+    id: 'ring-e',
+    campus: 'TC',
+    buildingId: 'E',
+    buildingName: 'E White Ring Point',
+    floor: '',
+    room: '',
+    area: 'White ring point for E',
+    entranceHint: 'Use the white inner ring corridor at E.',
+    precision: 'connector',
+    mapPoint: ringPoint('E'),
+    verified: true,
+  },
+  {
+    id: 'ring-f',
+    campus: 'TC',
+    buildingId: 'F',
+    buildingName: 'F White Ring Point',
+    floor: '',
+    room: '',
+    area: 'White ring point for F',
+    entranceHint: 'Use the white inner ring corridor at F.',
+    precision: 'connector',
+    mapPoint: ringPoint('F'),
+    verified: true,
+  },
+  {
+    id: 'ring-g',
+    campus: 'TC',
+    buildingId: 'G',
+    buildingName: 'G White Ring Point',
+    floor: '',
+    room: '',
+    area: 'White ring point for G',
+    entranceHint: 'Use the white inner ring corridor at G.',
+    precision: 'connector',
+    mapPoint: ringPoint('G'),
+    verified: true,
   },
   {
     id: 'ab-2002',
@@ -164,7 +280,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Industry-education forum room',
     entranceHint: 'Use A/B Building entrance, go to 2F, then follow signs to AB2002.',
     precision: 'room',
-    mapPoint: { x: 79.2, y: 64.5 },
+    mapPoint: ringMidpoint('A', 'B'),
     verified: true,
   },
   {
@@ -177,7 +293,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'White ring midpoint between B and C',
     entranceHint: 'Use the white inner ring corridor between B and C.',
     precision: 'connector',
-    mapPoint: { x: 74.7, y: 58.8 },
+    mapPoint: ringMidpoint('B', 'C'),
     verified: true,
   },
   // White-ring connector points: each one sits on the middle of the white circular corridor between two neighbouring buildings.
@@ -191,7 +307,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'White ring midpoint between A and B',
     entranceHint: 'Use the white inner ring corridor between A and B.',
     precision: 'connector',
-    mapPoint: { x: 77.6, y: 64.4 },
+    mapPoint: ringMidpoint('A', 'B'),
     verified: true,
   },
   {
@@ -204,7 +320,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'White ring midpoint between C and D',
     entranceHint: 'Use the white inner ring corridor between C and D.',
     precision: 'connector',
-    mapPoint: { x: 70.0, y: 51.6 },
+    mapPoint: ringMidpoint('C', 'D'),
     verified: true,
   },
   {
@@ -217,7 +333,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'White ring midpoint between D and E',
     entranceHint: 'Use the white inner ring corridor between D and E.',
     precision: 'connector',
-    mapPoint: { x: 64.1, y: 51.0 },
+    mapPoint: ringMidpoint('D', 'E'),
     verified: true,
   },
   {
@@ -230,7 +346,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'White ring midpoint between E and F',
     entranceHint: 'Use the white inner ring corridor between E and F.',
     precision: 'connector',
-    mapPoint: { x: 60.3, y: 58.2 },
+    mapPoint: ringMidpoint('E', 'F'),
     verified: true,
   },
   {
@@ -243,7 +359,20 @@ export const DEFAULT_LOCATIONS = [
     area: 'White ring midpoint between F and G',
     entranceHint: 'Use the white inner ring corridor between F and G.',
     precision: 'connector',
-    mapPoint: { x: 62.4, y: 65.7 },
+    mapPoint: ringMidpoint('F', 'G'),
+    verified: true,
+  },
+  {
+    id: 'ring-ga',
+    campus: 'TC',
+    buildingId: 'GA',
+    buildingName: 'G-A White Ring Connector',
+    floor: '',
+    room: '',
+    area: 'White ring midpoint between G and A',
+    entranceHint: 'Use the white inner ring corridor between G and A.',
+    precision: 'connector',
+    mapPoint: ringMidpoint('G', 'A'),
     verified: true,
   },
   {
@@ -256,7 +385,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Lecture room',
     entranceHint: 'Enter G Building from the inner loop and follow signs to G-1006.',
     precision: 'room',
-    mapPoint: { x: 58.9, y: 70.8 },
+    mapPoint: ringPoint('G'),
     verified: true,
   },
   {
@@ -269,7 +398,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'D Building area',
     entranceHint: 'Use the inner loop road and follow signs to D Building.',
     precision: 'building',
-    mapPoint: { x: 69.8, y: 43.4 },
+    mapPoint: ringPoint('D'),
     verified: true,
   },
   {
@@ -282,7 +411,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Academic Literacies Centre rooms',
     entranceHint: 'Use A Building entrance, go to 2F, then follow signs to A-2034 and A-2035.',
     precision: 'room',
-    mapPoint: { x: 76.2, y: 68.0 },
+    mapPoint: ringPoint('A'),
     verified: true,
   },
   {
@@ -295,7 +424,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Demo Day assessment room',
     entranceHint: 'Enter Synterra C Building, go to 4F, and prepare at your assigned team table.',
     precision: 'room',
-    mapPoint: { x: 80.5, y: 39.7 },
+    mapPoint: ringPoint('C'),
     verified: true,
   },
   {
@@ -308,7 +437,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Poster competition venue',
     entranceHint: 'Use the inner loop route to GA Building, go to 2F, then follow event signage to GA-2001.',
     precision: 'room',
-    mapPoint: { x: 63.3, y: 69.6 },
+    mapPoint: ringMidpoint('G', 'A'),
     verified: true,
   },
   {
@@ -321,7 +450,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Festival area',
     entranceHint: 'Use the main A Building entrance and follow festival booths.',
     precision: 'building',
-    mapPoint: { x: 76.6, y: 69.5 },
+    mapPoint: ringPoint('A'),
     verified: false,
   },
   {
@@ -334,7 +463,7 @@ export const DEFAULT_LOCATIONS = [
     area: 'Innovation Factory / X3 CoVenture area',
     entranceHint: 'Enter C Building and follow signage for Innovation Factory or X3 CoVenture.',
     precision: 'building',
-    mapPoint: { x: 80.7, y: 38.7 },
+    mapPoint: ringPoint('C'),
     verified: false,
   },
 ];

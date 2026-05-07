@@ -83,6 +83,7 @@ const BUILDING_ALIASES = [
   { id: 'DE', terms: ['de', 'd-e', 'de connector', 'd e connector', 'de楼', 'de环'] },
   { id: 'EF', terms: ['ef', 'e-f', 'ef connector', 'e f connector', 'ef楼', 'ef环'] },
   { id: 'FG', terms: ['fg', 'f-g', 'fg connector', 'f g connector', 'fg楼', 'fg环'] },
+  { id: 'GA', terms: ['ga', 'g-a', 'ga connector', 'g a connector', 'ga楼', 'ga环'] },
   { id: 'A', terms: ['a building', 'a楼'] },
   { id: 'B', terms: ['b building', 'b楼'] },
   { id: 'C', terms: ['c building', 'c楼'] },
