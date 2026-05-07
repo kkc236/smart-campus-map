@@ -589,6 +589,10 @@ a {
   gap: 10px;
 }
 
+.recommendation-rail.collapsed {
+  grid-template-columns: 1fr;
+}
+
 .recommendation-head {
   display: flex;
   flex-direction: column;
@@ -597,8 +601,25 @@ a {
   gap: 8px;
 }
 
+.recommendation-rail.collapsed .recommendation-head {
+  min-height: 36px;
+  flex-direction: row;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 5px 8px;
+}
+
 .recommendation-head .eyebrow {
   margin-bottom: 0;
+}
+
+.recommendation-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
 }
 
 .recommendation-head button,
@@ -1903,10 +1924,18 @@ a {
 }
 
 .personal-head {
+  position: sticky;
+  top: -12px;
+  z-index: 3;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) 32px;
   gap: 9px;
   align-items: center;
+  margin: -12px -12px 0;
+  border-bottom: 1px solid rgba(109, 47, 212, 0.14);
+  background: rgba(251, 248, 255, 0.96);
+  padding: 12px;
+  backdrop-filter: blur(10px);
 }
 
 .icon-button-lite {

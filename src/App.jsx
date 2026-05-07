@@ -74,7 +74,7 @@ function uid(prefix) {
 const ANCHORED_PLAYER_POINT = { x: 79.57916557757815, y: 37.287159379780796 };
 const ANCHORED_PLAYER_HEADING = 0;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MAP_CLUSTER_DISTANCE = 7.4;
+const MAP_CLUSTER_DISTANCE = 3.2;
 const TIME_FILTERS = [
   {
     id: 'today',
@@ -107,7 +107,7 @@ const TIME_FILTERS = [
 ];
 
 const ADMIN_SESSION_KEY = 'tc-campus-events-admin-session-v1';
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'tc-admin-demo';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '123456';
 const PERSONAL_ID_KEY = 'tc-campus-events-personal-id-v1';
 const PERSONAL_TASKS_PREFIX = 'tc-campus-events-personal-tasks-v1:';
 const PERSONAL_META_PREFIX = 'tc-campus-events-personal-meta-v1:';
@@ -266,13 +266,38 @@ function getText(language, key) {
   return UI_TEXT[language]?.[key] || UI_TEXT.en[key] || key;
 }
 
+function mergeCampusDataWithDefaults(data) {
+  const normalized = normalizeCampusData(data);
+  const defaults = normalizeCampusData(createDefaultData());
+  const defaultLocationsById = new Map(defaults.locations.map((location) => [location.id, location]));
+  const defaultEventsById = new Map(defaults.events.map((event) => [event.id, event]));
+  const existingLocationIds = new Set(normalized.locations.map((location) => location.id));
+  const existingEventIds = new Set(normalized.events.map((event) => event.id));
+  const locationPatches = new Set(['bc-corridor-2f']);
+  const locations = normalized.locations.map((location) => {
+    const defaultLocation = defaultLocationsById.get(location.id);
+    if (!defaultLocation || !locationPatches.has(location.id)) return location;
+    return { ...location, mapPoint: defaultLocation.mapPoint, verified: defaultLocation.verified };
+  });
+  defaults.locations.forEach((location) => {
+    if (!existingLocationIds.has(location.id)) locations.push(location);
+  });
+  const newDefaultEvents = defaults.events.filter((event) => !existingEventIds.has(event.id));
+
+  return normalizeCampusData({
+    ...normalized,
+    locations,
+    events: [...newDefaultEvents, ...normalized.events.map((event) => defaultEventsById.get(event.id) || event)],
+  });
+}
+
 function readCampusData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return normalizeCampusData(createDefaultData());
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed.locations) || !Array.isArray(parsed.events)) return normalizeCampusData(createDefaultData());
-    return normalizeCampusData(parsed);
+    return mergeCampusDataWithDefaults(parsed);
   } catch {
     return normalizeCampusData(createDefaultData());
   }
@@ -491,20 +516,32 @@ function compactMatchText(value) {
 function inferLocationFromText(text, locations) {
   const compactText = compactMatchText(text);
   if (!compactText) return null;
+  const matches = [];
+  locations.forEach((location, index) => {
+    const isConnector = location.precision === 'connector';
+    const candidates = [
+      { value: location.room, priority: 9 },
+      { value: `${location.buildingId || ''}${location.room || ''}`, priority: 8 },
+      { value: getLocationLabel(location), priority: 7 },
+      { value: location.area, priority: 6 },
+      { value: location.buildingName, priority: 5 },
+      { value: location.buildingId, priority: isConnector ? 4.5 : 4 },
+      { value: location.buildingId ? `${location.buildingId} building` : '', priority: isConnector ? 4.5 : 4 },
+      { value: location.buildingId ? `${location.buildingId}栋` : '', priority: isConnector ? 4.5 : 4 },
+      { value: location.buildingId ? `${location.buildingId}楼` : '', priority: isConnector ? 4.5 : 4 },
+      { value: location.buildingId ? location.buildingId.replace('-', '') : '', priority: isConnector ? 4.5 : 4 },
+    ];
+    candidates.forEach((candidate) => {
+      const compactCandidate = compactMatchText(candidate.value);
+      if (compactCandidate.length >= 2 && compactText.includes(compactCandidate)) {
+        matches.push({ location, priority: candidate.priority, length: compactCandidate.length, index });
+      }
+    });
+  });
+
   return (
-    locations.find((location) => {
-      const candidates = [
-        location.room,
-        location.buildingId,
-        location.buildingName,
-        location.area,
-        getLocationLabel(location),
-        `${location.buildingId || ''}${location.room || ''}`,
-      ]
-        .map(compactMatchText)
-        .filter((candidate) => candidate.length >= 2);
-      return candidates.some((candidate) => compactText.includes(candidate));
-    }) || null
+    matches.sort((first, second) => second.priority - first.priority || second.length - first.length || first.index - second.index)[0]
+      ?.location || null
   );
 }
 
@@ -1539,6 +1576,7 @@ function StudentApp({ data }) {
   const [personalMode, setPersonalMode] = useState(false);
   const [agentDialogOpen, setAgentDialogOpen] = useState(false);
   const [detailPanelOpen, setDetailPanelOpen] = useState(true);
+  const [recommendationsOpen, setRecommendationsOpen] = useState(true);
   const t = useCallback((key) => getText(language, key), [language]);
   const studentEvents = useMemo(() => data.events.map(resolveStudentEvent).filter(Boolean), [data.events]);
   const localSearchIntent = useMemo(() => createLocalSearchIntent(query), [query]);
@@ -1701,6 +1739,21 @@ function StudentApp({ data }) {
     [personalId],
   );
 
+  const clearSearchState = useCallback(() => {
+    setQuery('');
+    setAgentSearch({ status: 'idle', source: 'local', intent: createLocalSearchIntent('') });
+    setSelectedClusterId(null);
+  }, []);
+
+  const enterPersonalSpace = useCallback(
+    (openDrawer = true) => {
+      clearSearchState();
+      setPersonalMode(true);
+      if (openDrawer) setPersonalSpaceOpen(true);
+    },
+    [clearSearchState],
+  );
+
   const createPersonalTask = useCallback(
     (draft) => {
       if (!personalId) {
@@ -1721,12 +1774,11 @@ function StudentApp({ data }) {
       if (task.locationId) setSelectedLocationId(task.locationId);
       setSelectedEventId(null);
       setSheetMode('half');
-      setPersonalMode(true);
-      setPersonalSpaceOpen(true);
+      enterPersonalSpace(true);
       setPersonalNotice(`Added private task: ${task.title}`);
       return task;
     },
-    [locationsById, personalId, updatePersonalTasks],
+    [enterPersonalSpace, locationsById, personalId, updatePersonalTasks],
   );
 
   const updatePersonalTask = useCallback(
@@ -1766,12 +1818,11 @@ function StudentApp({ data }) {
     const parsedTask = parseForwardedEmailTask(forwardedEmail, data.locations);
     setPersonalTaskDraft(parsedTask);
     setAiDraftReady(true);
-    setPersonalMode(true);
-    setPersonalSpaceOpen(true);
+    enterPersonalSpace(true);
     setPersonalNotice(
       'AI draft ready. Check the title, time, location, scope, and theme before saving.',
     );
-  }, [data.locations, forwardedEmail]);
+  }, [data.locations, enterPersonalSpace, forwardedEmail]);
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -1866,10 +1917,16 @@ function StudentApp({ data }) {
           : 'Local fallback';
   const nextOpenPersonalTask = filteredPersonalTasks[0] || openPersonalTasks[0] || null;
 
+  const handleQueryChange = (value) => {
+    setQuery(value);
+    if (!value.trim()) {
+      setAgentSearch({ status: 'idle', source: 'local', intent: createLocalSearchIntent('') });
+      setSelectedClusterId(null);
+    }
+  };
+
   const openPersonalTaskList = () => {
-    setSelectedClusterId(null);
-    setPersonalMode(true);
-    setPersonalSpaceOpen(true);
+    enterPersonalSpace(true);
     setSelectedEventId(null);
     if (nextOpenPersonalTask) {
       setSelectedPersonalTaskId(nextOpenPersonalTask.id);
@@ -1887,8 +1944,7 @@ function StudentApp({ data }) {
 
   const openPersonalizedPublicEvent = (events, emptyNotice) => {
     const event = events[0];
-    setSelectedClusterId(null);
-    setPersonalMode(true);
+    enterPersonalSpace(false);
     setSelectedPersonalTaskId(null);
     if (event) {
       setSelectedEventId(event.id);
@@ -1911,10 +1967,7 @@ function StudentApp({ data }) {
         <div className="student-top-actions">
           <button
             className={`top-action personal-space-toggle ${personalMode ? 'active' : ''}`}
-            onClick={() => {
-              setPersonalMode(true);
-              setPersonalSpaceOpen(true);
-            }}
+            onClick={() => enterPersonalSpace(true)}
             title="Enter Personal Space mode"
             aria-label="Enter Personal Space mode"
           >
@@ -1971,7 +2024,7 @@ function StudentApp({ data }) {
           <div className="smart-search">
             <label className="search-box">
               <Search size={17} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('search')} />
+              <input value={query} onChange={(event) => handleQueryChange(event.target.value)} placeholder={t('search')} />
             </label>
             {query.trim() && (
               <div className={`agent-search-status ${agentSearch.status}`}>
@@ -2025,7 +2078,7 @@ function StudentApp({ data }) {
           <button
             type="button"
             className="personal-mode-chip personal-mode-title"
-            onClick={() => setPersonalSpaceOpen(true)}
+            onClick={() => enterPersonalSpace(true)}
             title="Open Personal Space settings"
           >
             <ClipboardCheck size={17} />
@@ -2075,7 +2128,7 @@ function StudentApp({ data }) {
             <strong>{checkedEventCount}</strong>
             <span>{language === 'zh' ? '\u6253\u5361\u53cd\u9988' : `check-in${checkedEventCount === 1 ? '' : 's'}`}</span>
           </button>
-          <button className="personal-mode-chip settings" type="button" onClick={() => setPersonalSpaceOpen(true)}>
+          <button className="personal-mode-chip settings" type="button" onClick={() => enterPersonalSpace(true)}>
             {language === 'zh' ? '\u8bbe\u7f6e' : 'Settings'}
           </button>
           <button
@@ -2117,6 +2170,8 @@ function StudentApp({ data }) {
           setDetailPanelOpen(true);
         }}
         onTimeFilter={setTimeFilter}
+        open={recommendationsOpen}
+        onToggleOpen={() => setRecommendationsOpen((value) => !value)}
       />
 
       <section className={`student-layout ${detailPanelOpen ? '' : 'details-collapsed'}`}>
@@ -2162,7 +2217,7 @@ function StudentApp({ data }) {
             }}
             onSelectPersonalTask={(taskId, locationId) => {
               setSelectedClusterId(null);
-              setPersonalMode(true);
+              enterPersonalSpace(false);
               setSelectedPersonalTaskId(taskId);
               setSelectedEventId(null);
               setSelectedLocationId(locationId);
@@ -2260,9 +2315,8 @@ function StudentApp({ data }) {
               onToggleEventCheckin={toggleEventCheckin}
               onUpdateEventFeedback={updateEventFeedback}
               onSelectPersonalTask={(task) => {
-                setPersonalMode(true);
+                enterPersonalSpace(true);
                 setSelectedPersonalTaskId(task.id);
-                setPersonalSpaceOpen(true);
                 setDetailPanelOpen(true);
               }}
               onTogglePersonalTask={(task) => updatePersonalTask(task.id, { completed: !task.completed })}
@@ -2291,7 +2345,7 @@ function StudentApp({ data }) {
         aiDraftReady={aiDraftReady}
         remindedEventCount={remindedEventCount}
         checkedEventCount={checkedEventCount}
-        onEnterPersonalMode={() => setPersonalMode(true)}
+        onEnterPersonalMode={() => enterPersonalSpace(false)}
         onExitPersonalMode={() => {
           setPersonalMode(false);
           setSelectedPersonalTaskId(null);
@@ -2299,7 +2353,7 @@ function StudentApp({ data }) {
         onCreateTask={submitPersonalTaskDraft}
         onCreateFromEmail={createTaskFromForwardedEmail}
         onSelectTask={(task) => {
-          setPersonalMode(true);
+          enterPersonalSpace(false);
           setSelectedPersonalTaskId(task.id);
           setSelectedEventId(null);
           if (task.locationId) setSelectedLocationId(task.locationId);
@@ -2337,7 +2391,7 @@ function StudentApp({ data }) {
         locations={data.locations}
         onCreatePersonalTask={createPersonalTask}
         onSelectPersonalTask={(taskId) => {
-          setPersonalMode(true);
+          enterPersonalSpace(false);
           const task = personalTasks.find((item) => item.id === taskId);
           if (task?.locationId) setSelectedLocationId(task.locationId);
           setSelectedPersonalTaskId(taskId);
@@ -2365,6 +2419,8 @@ function RecommendationRail({
   onSelectEvent,
   onSelectLocation,
   onTimeFilter,
+  open,
+  onToggleOpen,
 }) {
   const futureEvents = events
     .filter((event) => {
@@ -2413,26 +2469,42 @@ function RecommendationRail({
   ];
 
   return (
-    <section className="recommendation-rail" aria-label="Recommended events">
+    <section className={`recommendation-rail ${open ? '' : 'collapsed'}`} aria-label="Recommended events">
       <div className="recommendation-head">
         <span className="eyebrow">{recommendationTitle}</span>
-        <button onClick={() => onTimeFilter(primaryTimeFilter)} disabled={events.length === 0}>
-          <Clock size={15} />
-          {getTimeActionLabel(primaryTimeFilter, language)}
-        </button>
-      </div>
-      <div className="recommendation-cards">
-        {cards.map((card) => (
-          <button key={card.id} className="recommendation-card" onClick={card.action} disabled={!card.action}>
-            <span className="recommendation-icon">{card.icon}</span>
-            <span>
-              <small>{card.label}</small>
-              <strong>{card.title}</strong>
-              {card.meta && <em>{card.meta}</em>}
-            </span>
+        <div className="recommendation-actions">
+          {open && (
+            <button onClick={() => onTimeFilter(primaryTimeFilter)} disabled={events.length === 0}>
+              <Clock size={15} />
+              {getTimeActionLabel(primaryTimeFilter, language)}
+            </button>
+          )}
+          <button type="button" onClick={onToggleOpen}>
+            {open ? <X size={15} /> : <Clock size={15} />}
+            {open
+              ? language === 'zh'
+                ? '\u9690\u85cf\u63a8\u8350'
+                : 'Hide'
+              : language === 'zh'
+                ? '\u663e\u793a\u63a8\u8350'
+                : 'Show recommendations'}
           </button>
-        ))}
+        </div>
       </div>
+      {open && (
+        <div className="recommendation-cards">
+          {cards.map((card) => (
+            <button key={card.id} className="recommendation-card" onClick={card.action} disabled={!card.action}>
+              <span className="recommendation-icon">{card.icon}</span>
+              <span>
+                <small>{card.label}</small>
+                <strong>{card.title}</strong>
+                {card.meta && <em>{card.meta}</em>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
