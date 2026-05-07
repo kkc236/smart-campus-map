@@ -131,6 +131,16 @@ function ringPoint(pointId) {
 }
 
 function ringMidpoint(firstPointId, secondPointId) {
+  const connectorId = `${firstPointId}${secondPointId}`;
+  const reverseConnectorId = `${secondPointId}${firstPointId}`;
+  const connectorOverrides = {
+    // A-G is the bottom arc of the white ring, so a straight midpoint lands too high inside the ring.
+    AG: { x: 72.9, y: 76.0 },
+    GA: { x: 72.9, y: 76.0 },
+  };
+  if (connectorOverrides[connectorId]) return { ...connectorOverrides[connectorId] };
+  if (connectorOverrides[reverseConnectorId]) return { ...connectorOverrides[reverseConnectorId] };
+
   const first = WHITE_RING_POINTS[firstPointId];
   const second = WHITE_RING_POINTS[secondPointId];
   return {
