@@ -2536,6 +2536,72 @@ a {
   padding: 9px 11px;
 }
 
+.admin-online-status.ready,
+.admin-online-status.published {
+  border-color: rgba(31, 138, 112, 0.28);
+  background: #e8fbf4;
+  color: #064c3f;
+}
+
+.admin-online-status.loading {
+  border-color: rgba(49, 93, 255, 0.26);
+  background: #eef3ff;
+  color: #2444b5;
+}
+
+.admin-online-status.offline {
+  border-color: rgba(196, 73, 73, 0.25);
+  background: #fff0f0;
+  color: #8b2424;
+}
+
+.cloud-publish-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(180px, 0.8fr) auto auto;
+  gap: 8px;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.cloud-publish-panel label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cloud-publish-panel label span {
+  color: #647177;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.cloud-publish-panel input,
+.cloud-publish-panel select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafb;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.cloud-publish-panel small {
+  grid-column: 1 / -1;
+  color: #526168;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .admin-mode-banner {
   border-color: rgba(223, 109, 47, 0.28);
   background: #fff3ea;
@@ -2828,6 +2894,10 @@ a {
   .admin-editor {
     min-height: 0;
     border: 0;
+  }
+
+  .cloud-publish-panel {
+    grid-template-columns: 1fr;
   }
 
   .student-panel {

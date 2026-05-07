@@ -114,10 +114,43 @@ const PERSONAL_META_PREFIX = 'tc-campus-events-personal-meta-v1:';
 const PERSONAL_TASK_COLOR = '#6d2fd4';
 const DEFAULT_PERSONAL_SPACE_ID = 'default-personal-space';
 const APP_BASE_PATH = import.meta.env.BASE_URL || '/';
+const PUBLIC_DATA_FILE = 'campus-data.json';
+const GITHUB_TOKEN_SESSION_KEY = 'tc-campus-events-github-token-v1';
+const GITHUB_TARGET_STORAGE_KEY = 'tc-campus-events-github-target-v1';
+const GITHUB_DATA_TARGETS = [
+  {
+    id: 'kkc',
+    label: 'kkc236 / smart-campus-map',
+    owner: 'kkc236',
+    repo: 'smart-campus-map',
+    branch: 'main',
+    sourcePath: 'public/campus-data.json',
+    pagesBranch: '',
+    pagesPath: '',
+    siteUrl: 'https://kkc236.github.io/smart-campus-map/',
+  },
+  {
+    id: 'ent',
+    label: 'ENT208-GROUP-9 / smp_v2',
+    owner: 'ENT208-GROUP-9',
+    repo: 'smp_v2',
+    branch: 'main',
+    sourcePath: 'public/campus-data.json',
+    pagesBranch: 'gh-pages',
+    pagesPath: 'campus-data.json',
+    siteUrl: 'https://ent208-group-9.github.io/smp_v2/',
+  },
+];
+const GITHUB_TARGET_OPTIONS = [{ id: 'both', label: 'Both live sites' }, ...GITHUB_DATA_TARGETS];
 
 function getAppPath(path = '') {
   const base = APP_BASE_PATH.endsWith('/') ? APP_BASE_PATH : `${APP_BASE_PATH}/`;
   return `${base}${String(path).replace(/^\/+/, '')}`;
+}
+
+function getPublicDataUrl() {
+  const path = getAppPath(PUBLIC_DATA_FILE);
+  return `${path}${path.includes('?') ? '&' : '?'}t=${Date.now()}`;
 }
 
 function isAdminRoute() {
@@ -273,18 +306,13 @@ function mergeCampusDataWithDefaults(data) {
   const defaultEventsById = new Map(defaults.events.map((event) => [event.id, event]));
   const existingLocationIds = new Set(normalized.locations.map((location) => location.id));
   const existingEventIds = new Set(normalized.events.map((event) => event.id));
-  const locationPatches = new Set(defaults.locations.map((location) => location.id));
   const locations = normalized.locations.map((location) => {
     const defaultLocation = defaultLocationsById.get(location.id);
-    if (!defaultLocation || !locationPatches.has(location.id)) return location;
+    if (!defaultLocation) return location;
     return {
+      ...defaultLocation,
       ...location,
-      buildingName: defaultLocation.buildingName,
-      area: defaultLocation.area,
-      entranceHint: defaultLocation.entranceHint,
-      precision: defaultLocation.precision,
-      mapPoint: defaultLocation.mapPoint,
-      verified: defaultLocation.verified,
+      mapPoint: location.mapPoint || defaultLocation.mapPoint,
     };
   });
   defaults.locations.forEach((location) => {
@@ -295,7 +323,13 @@ function mergeCampusDataWithDefaults(data) {
   return normalizeCampusData({
     ...normalized,
     locations,
-    events: [...newDefaultEvents, ...normalized.events.map((event) => defaultEventsById.get(event.id) || event)],
+    events: [
+      ...newDefaultEvents,
+      ...normalized.events.map((event) => {
+        const defaultEvent = defaultEventsById.get(event.id);
+        return defaultEvent ? { ...defaultEvent, ...event } : event;
+      }),
+    ],
   });
 }
 
@@ -309,6 +343,113 @@ function readCampusData() {
   } catch {
     return normalizeCampusData(createDefaultData());
   }
+}
+
+async function fetchOnlineCampusData() {
+  const response = await fetch(getPublicDataUrl(), { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Online data ${response.status}`);
+  const parsed = await response.json();
+  if (!Array.isArray(parsed.locations) || !Array.isArray(parsed.events)) throw new Error('Online data has the wrong shape');
+  return mergeCampusDataWithDefaults(parsed);
+}
+
+function encodeBase64Utf8(value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+async function getGitHubErrorMessage(response) {
+  try {
+    const payload = await response.json();
+    return payload.message || response.statusText;
+  } catch {
+    return response.statusText;
+  }
+}
+
+async function readGitHubFile({ owner, repo, path, branch, token }) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}?ref=${encodeURIComponent(
+    branch,
+  )}`;
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(await getGitHubErrorMessage(response));
+  return response.json();
+}
+
+async function writeGitHubFile({ owner, repo, path, branch, token, message, content }) {
+  const existing = await readGitHubFile({ owner, repo, path, branch, token });
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}`;
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    body: JSON.stringify({
+      message,
+      content: encodeBase64Utf8(content),
+      branch,
+      ...(existing?.sha ? { sha: existing.sha } : {}),
+    }),
+  });
+  if (!response.ok) throw new Error(await getGitHubErrorMessage(response));
+  return response.json();
+}
+
+async function publishCampusDataOnline({ data, token, targetId }) {
+  const selectedTargets = targetId === 'both' ? GITHUB_DATA_TARGETS : GITHUB_DATA_TARGETS.filter((target) => target.id === targetId);
+  if (selectedTargets.length === 0) throw new Error('Choose a valid GitHub target');
+
+  const onlineData = normalizeCampusData({ ...data, updatedAt: new Date().toISOString() });
+  const content = `${JSON.stringify(onlineData, null, 2)}\n`;
+  const reports = [];
+
+  for (const target of selectedTargets) {
+    await writeGitHubFile({
+      owner: target.owner,
+      repo: target.repo,
+      path: target.sourcePath,
+      branch: target.branch,
+      token,
+      message: 'Update online campus map data',
+      content,
+    });
+
+    let liveStatus = 'GitHub Pages rebuild queued';
+    if (target.pagesBranch && target.pagesPath) {
+      try {
+        await writeGitHubFile({
+          owner: target.owner,
+          repo: target.repo,
+          path: target.pagesPath,
+          branch: target.pagesBranch,
+          token,
+          message: 'Update live campus map data',
+          content,
+        });
+        liveStatus = 'live JSON updated';
+      } catch (error) {
+        liveStatus = `live branch skipped: ${error instanceof Error ? error.message : 'unknown error'}`;
+      }
+    }
+
+    reports.push({ ...target, liveStatus });
+  }
+
+  return { onlineData, reports };
 }
 
 function normalizePersonalId(value) {
@@ -889,12 +1030,47 @@ function filterPersonalTasks(tasks, locations, { query, type, lens = 'all', time
     .sort((first, second) => new Date(first.dueTime || first.createdAt) - new Date(second.dueTime || second.createdAt));
 }
 
-function useCampusData() {
-  const [data, setData] = useState(readCampusData);
+function useCampusData({ localDraft = false } = {}) {
+  const [data, setData] = useState(() => (localDraft ? readCampusData() : normalizeCampusData(createDefaultData())));
+  const [onlineStatus, setOnlineStatus] = useState({
+    state: 'loading',
+    message: 'Loading online campus data',
+    updatedAt: '',
+  });
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const onlineData = await fetchOnlineCampusData();
+        if (cancelled) return;
+        setData(onlineData);
+        setOnlineStatus({
+          state: 'ready',
+          message: 'Online campus data loaded',
+          updatedAt: onlineData.updatedAt,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setOnlineStatus({
+          state: 'offline',
+          message: error instanceof Error ? error.message : 'Online data unavailable',
+          updatedAt: '',
+        });
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!localDraft) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+  }, [data, localDraft]);
 
   const updateData = (producer) => {
     setData((current) => ({
@@ -903,7 +1079,19 @@ function useCampusData() {
     }));
   };
 
-  return [data, updateData, setData];
+  const loadOnlineData = useCallback(async () => {
+    setOnlineStatus((current) => ({ ...current, state: 'loading', message: 'Loading online campus data' }));
+    const onlineData = await fetchOnlineCampusData();
+    setData(onlineData);
+    setOnlineStatus({
+      state: 'ready',
+      message: 'Online campus data loaded',
+      updatedAt: onlineData.updatedAt,
+    });
+    return onlineData;
+  }, []);
+
+  return { data, updateData, setData, onlineStatus, setOnlineStatus, loadOnlineData };
 }
 
 function TypePill({ typeId }) {
@@ -3677,7 +3865,7 @@ function AdminLogin({ onLogin }) {
   );
 }
 
-function AdminApp({ data, updateData, resetData, onLogout }) {
+function AdminApp({ data, updateData, setData, resetData, onLogout, onlineStatus, setOnlineStatus, loadOnlineData }) {
   const now = useNow(60000);
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -3686,6 +3874,22 @@ function AdminApp({ data, updateData, resetData, onLogout }) {
   const [editMode, setEditMode] = useState(false);
   const [lastMove, setLastMove] = useState(null);
   const [adminRole, setAdminRole] = useState('admin');
+  const [githubToken, setGithubToken] = useState(() => {
+    try {
+      return sessionStorage.getItem(GITHUB_TOKEN_SESSION_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+  const [githubTarget, setGithubTarget] = useState(() => {
+    try {
+      return localStorage.getItem(GITHUB_TARGET_STORAGE_KEY) || 'both';
+    } catch {
+      return 'both';
+    }
+  });
+  const [publishNotice, setPublishNotice] = useState('');
+  const [publishing, setPublishing] = useState(false);
   const canEditEvents = adminRole === 'admin' || adminRole === 'publisher';
   const canEditPlaces = adminRole === 'admin' || adminRole === 'verifier';
   const canPublish = adminRole === 'admin' || adminRole === 'publisher';
@@ -3710,6 +3914,70 @@ function AdminApp({ data, updateData, resetData, onLogout }) {
       ),
     [data.events],
   );
+
+  useEffect(() => {
+    if (!data.events.some((event) => event.id === selectedEventId)) {
+      setSelectedEventId(data.events[0]?.id || null);
+    }
+    if (!data.locations.some((location) => location.id === selectedLocationId)) {
+      setSelectedLocationId(data.events[0]?.locationId || data.locations[0]?.id || null);
+    }
+  }, [data.events, data.locations, selectedEventId, selectedLocationId]);
+
+  useEffect(() => {
+    try {
+      if (githubToken) sessionStorage.setItem(GITHUB_TOKEN_SESSION_KEY, githubToken);
+      else sessionStorage.removeItem(GITHUB_TOKEN_SESSION_KEY);
+    } catch {
+      // Ignore private browsing storage failures; the token still works for this render.
+    }
+  }, [githubToken]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(GITHUB_TARGET_STORAGE_KEY, githubTarget);
+    } catch {
+      // Target selection is only a convenience.
+    }
+  }, [githubTarget]);
+
+  const publishOnline = async () => {
+    if (!githubToken.trim()) {
+      setPublishNotice('Paste a GitHub token with Contents read/write permission first.');
+      return;
+    }
+    setPublishing(true);
+    setPublishNotice('Publishing online data to GitHub...');
+    try {
+      const result = await publishCampusDataOnline({ data, token: githubToken.trim(), targetId: githubTarget });
+      setData(result.onlineData);
+      setOnlineStatus({
+        state: 'published',
+        message: 'Online campus data published',
+        updatedAt: result.onlineData.updatedAt,
+      });
+      setPublishNotice(
+        `Published: ${result.reports.map((report) => `${report.label} (${report.liveStatus})`).join('; ')}. Students can refresh the page.`,
+      );
+    } catch (error) {
+      setPublishNotice(error instanceof Error ? `Publish failed: ${error.message}` : 'Publish failed.');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const reloadOnline = async () => {
+    setPublishing(true);
+    setPublishNotice('Loading current online data...');
+    try {
+      const onlineData = await loadOnlineData();
+      setPublishNotice(`Loaded online data. ${formatUpdatedAt(onlineData.updatedAt, now)}.`);
+    } catch (error) {
+      setPublishNotice(error instanceof Error ? `Load failed: ${error.message}` : 'Load failed.');
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   const updateEvent = (eventId, patch) => {
     if (!canEditEvents) return;
@@ -3902,7 +4170,11 @@ function AdminApp({ data, updateData, resetData, onLogout }) {
         <div className="admin-statusbar">
           <span>
             <Save size={16} />
-            Autosaved local draft
+            Local draft autosaved
+          </span>
+          <span className={`admin-online-status ${onlineStatus?.state || 'idle'}`}>
+            <ShieldCheck size={16} />
+            {onlineStatus?.updatedAt ? `${onlineStatus.message} / ${formatUpdatedAt(onlineStatus.updatedAt, now)}` : onlineStatus?.message}
           </span>
           <button
             className={editMode ? 'primary-button small' : 'ghost-button small'}
@@ -3919,6 +4191,37 @@ function AdminApp({ data, updateData, resetData, onLogout }) {
           <button className="ghost-button small danger-soft" onClick={resetData}>
             Reset demo
           </button>
+        </div>
+
+        <div className="cloud-publish-panel">
+          <label>
+            <span>GitHub token</span>
+            <input
+              type="password"
+              value={githubToken}
+              onChange={(event) => setGithubToken(event.target.value)}
+              placeholder="Fine-grained token: Contents read/write"
+              autoComplete="off"
+            />
+          </label>
+          <label>
+            <span>Publish target</span>
+            <select value={githubTarget} onChange={(event) => setGithubTarget(event.target.value)}>
+              {GITHUB_TARGET_OPTIONS.map((target) => (
+                <option key={target.id} value={target.id}>
+                  {target.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="primary-button small" onClick={publishOnline} disabled={publishing}>
+            <Save size={15} />
+            {publishing ? 'Working' : 'Publish online'}
+          </button>
+          <button className="ghost-button small" onClick={reloadOnline} disabled={publishing}>
+            Load online
+          </button>
+          <small>{publishNotice || 'Public events are saved to GitHub and then read by the student map.'}</small>
         </div>
 
         {editMode && (
@@ -4118,8 +4421,8 @@ function HealthPanel({ checks }) {
 }
 
 export default function App() {
-  const [data, updateData, setData] = useCampusData();
   const isAdmin = isAdminRoute();
+  const { data, updateData, setData, onlineStatus, setOnlineStatus, loadOnlineData } = useCampusData({ localDraft: isAdmin });
   const [adminAuthed, setAdminAuthed] = useState(() => localStorage.getItem(ADMIN_SESSION_KEY) === 'active');
 
   const resetData = () => {
@@ -4134,7 +4437,11 @@ export default function App() {
     <AdminApp
       data={data}
       updateData={updateData}
+      setData={setData}
       resetData={resetData}
+      onlineStatus={onlineStatus}
+      setOnlineStatus={setOnlineStatus}
+      loadOnlineData={loadOnlineData}
       onLogout={() => {
         localStorage.removeItem(ADMIN_SESSION_KEY);
         setAdminAuthed(false);
