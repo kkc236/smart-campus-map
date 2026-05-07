@@ -117,13 +117,13 @@ export const TC_LOCATION_ANCHORS = [
 // White-ring coordinates: A-G are fixed on the center line of the white circular corridor.
 // Connector coordinates such as AB or BC must be calculated from these ring points, not placed inside buildings.
 const WHITE_RING_POINTS = {
-  A: { x: 77.6, y: 68.3 },
-  B: { x: 85.8, y: 55.4 },
-  C: { x: 82.4, y: 41.7 },
-  D: { x: 71.5, y: 32.0 },
-  E: { x: 61.9, y: 41.5 },
-  F: { x: 59.1, y: 58.2 },
-  G: { x: 66.2, y: 71.0 },
+  A: { x: 81.6, y: 71.8 },
+  B: { x: 88.4, y: 54.6 },
+  C: { x: 83.3, y: 35.5 },
+  D: { x: 72.8, y: 30.3 },
+  E: { x: 63.3, y: 34.5 },
+  F: { x: 56.8, y: 56.6 },
+  G: { x: 64.3, y: 72.6 },
 };
 
 function ringPoint(pointId) {
@@ -513,8 +513,8 @@ export const DEFAULT_EVENTS = [
     official: false,
     sourceUrl: '',
     sourceLabel: 'ENT208TC forum announcement',
-    startTime: '2026-05-13T09:00',
-    endTime: '2026-05-13T18:00',
+    startTime: '2026-05-08T09:00',
+    endTime: '2026-05-08T18:00',
     locationId: 'synterra-c-4019',
     studentLenses: ['campus'],
     summary:
